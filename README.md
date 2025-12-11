@@ -58,7 +58,7 @@ You write **what you want**, not every ffmpeg flag.
 Clone the repo:
 
 ```bash
-git clone https://github.com/your-org/mediasmith.git
+git clone https://github.com/KasunUdaraWaththeHewa/MediaSmith
 cd mediasmith
 ```
 
