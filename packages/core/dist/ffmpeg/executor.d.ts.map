@@ -1,0 +1,1 @@
+{"version":3,"file":"executor.d.ts","sourceRoot":"","sources":["../../src/ffmpeg/executor.ts"],"names":[],"mappings":"AAEA,MAAM,WAAW,WAAW;IAC1B,MAAM,CAAC,EAAE,OAAO,CAAC;IACjB,KAAK,CAAC,EAAE,CAAC,IAAI,EAAE,MAAM,KAAK,IAAI,CAAC;CAChC;AAED,wBAAgB,SAAS,CAAC,IAAI,EAAE,MAAM,EAAE,EAAE,IAAI,GAAE,WAAgB,GAAG,OAAO,CAAC,IAAI,CAAC,CAiB/E"}

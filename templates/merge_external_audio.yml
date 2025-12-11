@@ -1,0 +1,17 @@
+version: 1
+job:
+  name: "merge_external_audio"
+
+  for_each_pairs:
+    video_pattern: "input/video/**/*.mp4"
+    audio_pattern: "input/audio/**/*.mp4"
+    pair_by: basename
+
+  output:
+    directory: "output/merged"
+    filename: "{basename}_merged.mp4"
+
+  steps:
+    - action: merge_audio
+      audio_source: external_only   # use only external recorder audio
+      # original_volume / external_volume only used if audio_source == "mix"

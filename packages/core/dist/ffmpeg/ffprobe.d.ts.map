@@ -1,0 +1,1 @@
+{"version":3,"file":"ffprobe.d.ts","sourceRoot":"","sources":["../../src/ffmpeg/ffprobe.ts"],"names":[],"mappings":"AAEA,MAAM,WAAW,cAAc;IAC7B,QAAQ,EAAE,MAAM,CAAC;IACjB,KAAK,EAAE,MAAM,CAAC;IACd,MAAM,EAAE,MAAM,CAAC;CAChB;AAED,wBAAgB,YAAY,CAAC,IAAI,EAAE,MAAM,GAAG,OAAO,CAAC,cAAc,CAAC,CA+BlE"}

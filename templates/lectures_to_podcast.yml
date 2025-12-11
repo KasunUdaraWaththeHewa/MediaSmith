@@ -1,0 +1,15 @@
+version: 1
+job:
+  name: "lectures_to_podcast_audio"
+
+  for_each:
+    glob: "input/lectures/**/*.mp4"
+
+  output:
+    directory: "output/podcast"
+    filename: "{basename}.mp3"
+
+  steps:
+    - action: extract_audio
+      format: mp3               # mp3 | wav | etc.
+      quality: medium           # your mapping in code

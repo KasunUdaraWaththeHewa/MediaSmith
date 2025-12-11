@@ -1,0 +1,1 @@
+{"version":3,"file":"Step.d.ts","sourceRoot":"","sources":["../../src/domain/Step.ts"],"names":[],"mappings":"AAAA,MAAM,MAAM,UAAU,GAClB,gBAAgB,GAChB,aAAa,GACb,eAAe,GACf,MAAM,GACN,iBAAiB,GACjB,cAAc,CAAC;AAEnB,MAAM,WAAW,QAAQ;IACvB,MAAM,EAAE,UAAU,CAAC;IACnB,CAAC,GAAG,EAAE,MAAM,GAAG,GAAG,CAAC;CACpB"}

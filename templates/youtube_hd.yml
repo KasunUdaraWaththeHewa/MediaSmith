@@ -1,0 +1,15 @@
+version: 1
+job:
+  name: "compress_for_youtube_hd"
+
+  for_each:
+    glob: "input/youtube/**/*.mp4"
+
+  output:
+    directory: "output/youtube"
+    filename: "{basename}_yt.mp4"
+
+  steps:
+    - action: compress_video
+      profile: youtube_hd      # handled in code
+      quality: high            # aim for CRF ~20 / higher bitrate

@@ -1,0 +1,16 @@
+version: 1
+job:
+  name: "batch_compress_for_whatsapp"
+
+  for_each:
+    glob: "input/**/*.mp4"
+
+  output:
+    directory: "output/whatsapp"
+    filename: "{basename}_wa.mp4"
+
+  steps:
+    - action: compress_video
+      profile: whatsapp        # handled in compressVideo action
+      max_size_mb: 16          # rough target (WhatsApp-ish)
+      quality: medium          # low | medium | high
