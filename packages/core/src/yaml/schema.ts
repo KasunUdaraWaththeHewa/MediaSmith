@@ -19,7 +19,17 @@ export const ForEachGlobSchema = z.object({
 export const ForEachPairsSchema = z.object({
   video_pattern: z.string(),
   audio_pattern: z.string(),
-  pair_by: z.literal('basename')
+  pair_by: z.enum(['basename', 'normalized_basename']),
+  normalize: z.object({
+    video: z.object({
+      remove_prefix: z.string().optional(),
+      remove_suffix: z.string().optional()
+    }).optional(),
+    audio: z.object({
+      remove_prefix: z.string().optional(),
+      remove_suffix: z.string().optional()
+    }).optional()
+  }).optional()
 });
 
 export const OutputPatternSchema = z.object({
