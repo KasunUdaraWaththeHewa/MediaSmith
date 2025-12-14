@@ -1,0 +1,1 @@
+{"version":3,"file":"constants.d.ts","sourceRoot":"","sources":["../../src/ffmpeg/constants.ts"],"names":[],"mappings":"AAAA,eAAO,MAAM,aAAa;;;CAGhB,CAAC;AAEX,MAAM,MAAM,YAAY,GAAG,OAAO,aAAa,CAAC,MAAM,OAAO,aAAa,CAAC,CAAC;AAE5E,eAAO,MAAM,aAAa;;;;CAIhB,CAAC;AAEX,MAAM,MAAM,OAAO,GAAG,OAAO,aAAa,CAAC,MAAM,OAAO,aAAa,CAAC,CAAC;AAGvE,eAAO,MAAM,YAAY,EAAE,MAAM,CAAC,OAAO,EAAE,MAAM,CAIhD,CAAC"}

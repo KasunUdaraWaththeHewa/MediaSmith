@@ -1,10 +1,11 @@
 import { z } from 'zod';
+import { StepAction } from '../domain/Step';
 export declare const StepSchema: z.ZodObject<{
-    action: z.ZodEnum<["compress_video", "merge_audio", "extract_audio", "trim", "normalize_audio", "dedupe_media"]>;
+    action: z.ZodEnum<[StepAction.CompressVideo, StepAction.MergeAudio, StepAction.ExtractAudio, StepAction.Trim, StepAction.NormalizeAudio, StepAction.DedupeMedia]>;
 }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-    action: z.ZodEnum<["compress_video", "merge_audio", "extract_audio", "trim", "normalize_audio", "dedupe_media"]>;
+    action: z.ZodEnum<[StepAction.CompressVideo, StepAction.MergeAudio, StepAction.ExtractAudio, StepAction.Trim, StepAction.NormalizeAudio, StepAction.DedupeMedia]>;
 }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-    action: z.ZodEnum<["compress_video", "merge_audio", "extract_audio", "trim", "normalize_audio", "dedupe_media"]>;
+    action: z.ZodEnum<[StepAction.CompressVideo, StepAction.MergeAudio, StepAction.ExtractAudio, StepAction.Trim, StepAction.NormalizeAudio, StepAction.DedupeMedia]>;
 }, z.ZodTypeAny, "passthrough">>;
 export declare const ForEachGlobSchema: z.ZodObject<{
     glob: z.ZodString;
@@ -191,11 +192,11 @@ export declare const JobSchema: z.ZodObject<{
             filename: string;
         }>;
         steps: z.ZodArray<z.ZodObject<{
-            action: z.ZodEnum<["compress_video", "merge_audio", "extract_audio", "trim", "normalize_audio", "dedupe_media"]>;
+            action: z.ZodEnum<[StepAction.CompressVideo, StepAction.MergeAudio, StepAction.ExtractAudio, StepAction.Trim, StepAction.NormalizeAudio, StepAction.DedupeMedia]>;
         }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-            action: z.ZodEnum<["compress_video", "merge_audio", "extract_audio", "trim", "normalize_audio", "dedupe_media"]>;
+            action: z.ZodEnum<[StepAction.CompressVideo, StepAction.MergeAudio, StepAction.ExtractAudio, StepAction.Trim, StepAction.NormalizeAudio, StepAction.DedupeMedia]>;
         }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-            action: z.ZodEnum<["compress_video", "merge_audio", "extract_audio", "trim", "normalize_audio", "dedupe_media"]>;
+            action: z.ZodEnum<[StepAction.CompressVideo, StepAction.MergeAudio, StepAction.ExtractAudio, StepAction.Trim, StepAction.NormalizeAudio, StepAction.DedupeMedia]>;
         }, z.ZodTypeAny, "passthrough">>, "many">;
     }, "strip", z.ZodTypeAny, {
         name: string;
@@ -204,7 +205,7 @@ export declare const JobSchema: z.ZodObject<{
             filename: string;
         };
         steps: z.objectOutputType<{
-            action: z.ZodEnum<["compress_video", "merge_audio", "extract_audio", "trim", "normalize_audio", "dedupe_media"]>;
+            action: z.ZodEnum<[StepAction.CompressVideo, StepAction.MergeAudio, StepAction.ExtractAudio, StepAction.Trim, StepAction.NormalizeAudio, StepAction.DedupeMedia]>;
         }, z.ZodTypeAny, "passthrough">[];
         for_each?: {
             glob: string;
@@ -231,7 +232,7 @@ export declare const JobSchema: z.ZodObject<{
             filename: string;
         };
         steps: z.objectInputType<{
-            action: z.ZodEnum<["compress_video", "merge_audio", "extract_audio", "trim", "normalize_audio", "dedupe_media"]>;
+            action: z.ZodEnum<[StepAction.CompressVideo, StepAction.MergeAudio, StepAction.ExtractAudio, StepAction.Trim, StepAction.NormalizeAudio, StepAction.DedupeMedia]>;
         }, z.ZodTypeAny, "passthrough">[];
         for_each?: {
             glob: string;
@@ -261,7 +262,7 @@ export declare const JobSchema: z.ZodObject<{
             filename: string;
         };
         steps: z.objectOutputType<{
-            action: z.ZodEnum<["compress_video", "merge_audio", "extract_audio", "trim", "normalize_audio", "dedupe_media"]>;
+            action: z.ZodEnum<[StepAction.CompressVideo, StepAction.MergeAudio, StepAction.ExtractAudio, StepAction.Trim, StepAction.NormalizeAudio, StepAction.DedupeMedia]>;
         }, z.ZodTypeAny, "passthrough">[];
         for_each?: {
             glob: string;
@@ -291,7 +292,7 @@ export declare const JobSchema: z.ZodObject<{
             filename: string;
         };
         steps: z.objectInputType<{
-            action: z.ZodEnum<["compress_video", "merge_audio", "extract_audio", "trim", "normalize_audio", "dedupe_media"]>;
+            action: z.ZodEnum<[StepAction.CompressVideo, StepAction.MergeAudio, StepAction.ExtractAudio, StepAction.Trim, StepAction.NormalizeAudio, StepAction.DedupeMedia]>;
         }, z.ZodTypeAny, "passthrough">[];
         for_each?: {
             glob: string;

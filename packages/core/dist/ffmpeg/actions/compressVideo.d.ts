@@ -1,8 +1,9 @@
 import { VideoProbeInfo } from '../ffprobe';
+import { VideoProfile, Quality } from '../constants';
 export interface CompressVideoStep {
     action: 'compress_video';
-    profile?: 'whatsapp' | 'youtube_hd';
-    quality?: 'low' | 'medium' | 'high';
+    profile?: VideoProfile;
+    quality?: Quality;
     max_size_mb?: number;
 }
 export declare function buildCompressVideoArgs(step: CompressVideoStep, inputFile: string, outputFile: string, probe: VideoProbeInfo): string[];

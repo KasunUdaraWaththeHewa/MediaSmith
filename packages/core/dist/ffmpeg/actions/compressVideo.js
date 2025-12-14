@@ -1,27 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildCompressVideoArgs = buildCompressVideoArgs;
-function qualityToCrf(q) {
-    if (!q)
-        return 23;
-    if (q === 'high')
-        return 20;
-    if (q === 'low')
-        return 28;
-    return 23;
-}
+const constants_1 = require("../constants");
 function buildCompressVideoArgs(step, inputFile, outputFile, probe) {
     const args = [];
     args.push('-hide_banner', '-y', '-i', inputFile);
     let width = probe.width;
     let targetBitrateK = 2000;
-    if (step.profile === 'whatsapp') {
+    if (step.profile === constants_1.VideoProfiles.WhatsApp) {
         width = Math.min(width, 960);
         targetBitrateK = 800;
     }
-    else if (step.profile === 'youtube_hd') {
+    else if (step.profile === constants_1.VideoProfiles.YouTubeHD) {
         width = 1920;
-        targetBitrateK = step.quality === 'high' ? 8000 : 5000;
+        targetBitrateK = step.quality === constants_1.QualityLevels.High ? 8000 : 5000;
     }
     if (width && width !== probe.width) {
         args.push('-vf', `scale=${width}:-1`);
@@ -34,7 +26,7 @@ function buildCompressVideoArgs(step, inputFile, outputFile, probe) {
         args.push('-b:v', `${targetBitrateK}k`);
     }
     else {
-        const crf = qualityToCrf(step.quality);
+        const crf = constants_1.QualityToCrf[step.quality ?? constants_1.QualityLevels.Medium];
         args.push('-crf', String(crf));
     }
     args.push('-c:a', 'aac', '-b:a', '128k');

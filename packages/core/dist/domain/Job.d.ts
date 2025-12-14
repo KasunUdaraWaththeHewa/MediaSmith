@@ -1,9 +1,9 @@
-import { BaseStep } from './Step';
+import { Step } from './Step';
 export interface Task {
     id: string;
     inputFiles: string[];
     outputFile: string;
-    steps: BaseStep[];
+    steps: Step[];
     basename: string;
 }
 export interface PlannedJob {

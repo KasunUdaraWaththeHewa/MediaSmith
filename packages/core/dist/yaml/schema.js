@@ -4,12 +4,12 @@ exports.JobSchema = exports.OutputPatternSchema = exports.ForEachPairsSchema = e
 const zod_1 = require("zod");
 exports.StepSchema = zod_1.z.object({
     action: zod_1.z.enum([
-        'compress_video',
-        'merge_audio',
-        'extract_audio',
-        'trim',
-        'normalize_audio',
-        'dedupe_media'
+        "compress_video" /* StepAction.CompressVideo */,
+        "merge_audio" /* StepAction.MergeAudio */,
+        "extract_audio" /* StepAction.ExtractAudio */,
+        "trim" /* StepAction.Trim */,
+        "normalize_audio" /* StepAction.NormalizeAudio */,
+        "dedupe_media" /* StepAction.DedupeMedia */
     ])
     // .passthrough() allows extra fields depending on action
 }).passthrough();
