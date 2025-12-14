@@ -19,7 +19,17 @@ exports.ForEachGlobSchema = zod_1.z.object({
 exports.ForEachPairsSchema = zod_1.z.object({
     video_pattern: zod_1.z.string(),
     audio_pattern: zod_1.z.string(),
-    pair_by: zod_1.z.literal('basename')
+    pair_by: zod_1.z.enum(['basename', 'normalized_basename']),
+    normalize: zod_1.z.object({
+        video: zod_1.z.object({
+            remove_prefix: zod_1.z.string().optional(),
+            remove_suffix: zod_1.z.string().optional()
+        }).optional(),
+        audio: zod_1.z.object({
+            remove_prefix: zod_1.z.string().optional(),
+            remove_suffix: zod_1.z.string().optional()
+        }).optional()
+    }).optional()
 });
 exports.OutputPatternSchema = zod_1.z.object({
     directory: zod_1.z.string(),

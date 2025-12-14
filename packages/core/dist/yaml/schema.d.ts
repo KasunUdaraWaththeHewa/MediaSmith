@@ -16,15 +16,75 @@ export declare const ForEachGlobSchema: z.ZodObject<{
 export declare const ForEachPairsSchema: z.ZodObject<{
     video_pattern: z.ZodString;
     audio_pattern: z.ZodString;
-    pair_by: z.ZodLiteral<"basename">;
+    pair_by: z.ZodEnum<["basename", "normalized_basename"]>;
+    normalize: z.ZodOptional<z.ZodObject<{
+        video: z.ZodOptional<z.ZodObject<{
+            remove_prefix: z.ZodOptional<z.ZodString>;
+            remove_suffix: z.ZodOptional<z.ZodString>;
+        }, "strip", z.ZodTypeAny, {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        }, {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        }>>;
+        audio: z.ZodOptional<z.ZodObject<{
+            remove_prefix: z.ZodOptional<z.ZodString>;
+            remove_suffix: z.ZodOptional<z.ZodString>;
+        }, "strip", z.ZodTypeAny, {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        }, {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        }>>;
+    }, "strip", z.ZodTypeAny, {
+        video?: {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        } | undefined;
+        audio?: {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        } | undefined;
+    }, {
+        video?: {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        } | undefined;
+        audio?: {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        } | undefined;
+    }>>;
 }, "strip", z.ZodTypeAny, {
     video_pattern: string;
     audio_pattern: string;
-    pair_by: "basename";
+    pair_by: "basename" | "normalized_basename";
+    normalize?: {
+        video?: {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        } | undefined;
+        audio?: {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        } | undefined;
+    } | undefined;
 }, {
     video_pattern: string;
     audio_pattern: string;
-    pair_by: "basename";
+    pair_by: "basename" | "normalized_basename";
+    normalize?: {
+        video?: {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        } | undefined;
+        audio?: {
+            remove_prefix?: string | undefined;
+            remove_suffix?: string | undefined;
+        } | undefined;
+    } | undefined;
 }>;
 export declare const OutputPatternSchema: z.ZodObject<{
     directory: z.ZodString;
@@ -50,15 +110,75 @@ export declare const JobSchema: z.ZodObject<{
         for_each_pairs: z.ZodOptional<z.ZodObject<{
             video_pattern: z.ZodString;
             audio_pattern: z.ZodString;
-            pair_by: z.ZodLiteral<"basename">;
+            pair_by: z.ZodEnum<["basename", "normalized_basename"]>;
+            normalize: z.ZodOptional<z.ZodObject<{
+                video: z.ZodOptional<z.ZodObject<{
+                    remove_prefix: z.ZodOptional<z.ZodString>;
+                    remove_suffix: z.ZodOptional<z.ZodString>;
+                }, "strip", z.ZodTypeAny, {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                }, {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                }>>;
+                audio: z.ZodOptional<z.ZodObject<{
+                    remove_prefix: z.ZodOptional<z.ZodString>;
+                    remove_suffix: z.ZodOptional<z.ZodString>;
+                }, "strip", z.ZodTypeAny, {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                }, {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                }>>;
+            }, "strip", z.ZodTypeAny, {
+                video?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+                audio?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+            }, {
+                video?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+                audio?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+            }>>;
         }, "strip", z.ZodTypeAny, {
             video_pattern: string;
             audio_pattern: string;
-            pair_by: "basename";
+            pair_by: "basename" | "normalized_basename";
+            normalize?: {
+                video?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+                audio?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+            } | undefined;
         }, {
             video_pattern: string;
             audio_pattern: string;
-            pair_by: "basename";
+            pair_by: "basename" | "normalized_basename";
+            normalize?: {
+                video?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+                audio?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+            } | undefined;
         }>>;
         output: z.ZodObject<{
             directory: z.ZodString;
@@ -92,7 +212,17 @@ export declare const JobSchema: z.ZodObject<{
         for_each_pairs?: {
             video_pattern: string;
             audio_pattern: string;
-            pair_by: "basename";
+            pair_by: "basename" | "normalized_basename";
+            normalize?: {
+                video?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+                audio?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+            } | undefined;
         } | undefined;
     }, {
         name: string;
@@ -109,7 +239,17 @@ export declare const JobSchema: z.ZodObject<{
         for_each_pairs?: {
             video_pattern: string;
             audio_pattern: string;
-            pair_by: "basename";
+            pair_by: "basename" | "normalized_basename";
+            normalize?: {
+                video?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+                audio?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+            } | undefined;
         } | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
@@ -129,7 +269,17 @@ export declare const JobSchema: z.ZodObject<{
         for_each_pairs?: {
             video_pattern: string;
             audio_pattern: string;
-            pair_by: "basename";
+            pair_by: "basename" | "normalized_basename";
+            normalize?: {
+                video?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+                audio?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+            } | undefined;
         } | undefined;
     };
 }, {
@@ -149,7 +299,17 @@ export declare const JobSchema: z.ZodObject<{
         for_each_pairs?: {
             video_pattern: string;
             audio_pattern: string;
-            pair_by: "basename";
+            pair_by: "basename" | "normalized_basename";
+            normalize?: {
+                video?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+                audio?: {
+                    remove_prefix?: string | undefined;
+                    remove_suffix?: string | undefined;
+                } | undefined;
+            } | undefined;
         } | undefined;
     };
 }>;
