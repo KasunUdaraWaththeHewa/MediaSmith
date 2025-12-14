@@ -3,19 +3,25 @@ import { planJob } from '../planner/batchPlanner';
 import { ffprobeVideo } from '../ffmpeg/ffprobe';
 import { buildArgsForStep } from '../ffmpeg/actions';
 import { runFfmpeg } from '../ffmpeg/executor';
+import { logger } from '../logger';
 
 export interface RunOptions {
   dryRun?: boolean;
   onLog?: (msg: string) => void;
 }
 
-export async function runJobFromConfig(config: JobConfigValidated, opts: RunOptions = {}) {
-  const job = await planJob(config);
+export async function runJobFromConfig(
+  config: JobConfigValidated,
+  opts: RunOptions = {}
+) {
+  const job = await planJob(config, opts.onLog);
 
-  opts.onLog?.(`Planning job "${job.jobName}" (${job.tasks.length} tasks)`);
+  logger.info(`Planning job "${job.jobName}" (${job.tasks.length} tasks)`);
 
   for (const task of job.tasks) {
-    opts.onLog?.(`Task ${task.id}: ${task.inputFiles.join(', ')} -> ${task.outputFile}`);
+    logger.task(
+      `Task ${task.id}: ${task.inputFiles.join(', ')} -> ${task.outputFile}`
+    );
 
     // Ensure output dir exists
     const path = await import('path');
@@ -37,13 +43,13 @@ export async function runJobFromConfig(config: JobConfigValidated, opts: RunOpti
       const args = buildArgsForStep(step, {
         inputFiles: task.inputFiles,
         outputFile: task.outputFile,
-        probe
+        probe,
       });
 
-      opts.onLog?.(`Running step "${step.action}"...`);
+      logger.step(`Running step "${step.action}"...`);
       await runFfmpeg(args, { dryRun: opts.dryRun, onLog: opts.onLog });
     }
   }
 
-  opts.onLog?.('Job complete');
+  logger.success('Job complete');
 }

@@ -5,11 +5,12 @@ const batchPlanner_1 = require("../planner/batchPlanner");
 const ffprobe_1 = require("../ffmpeg/ffprobe");
 const actions_1 = require("../ffmpeg/actions");
 const executor_1 = require("../ffmpeg/executor");
+const logger_1 = require("../logger");
 async function runJobFromConfig(config, opts = {}) {
-    const job = await (0, batchPlanner_1.planJob)(config);
-    opts.onLog?.(`Planning job "${job.jobName}" (${job.tasks.length} tasks)`);
+    const job = await (0, batchPlanner_1.planJob)(config, opts.onLog);
+    logger_1.logger.info(`Planning job "${job.jobName}" (${job.tasks.length} tasks)`);
     for (const task of job.tasks) {
-        opts.onLog?.(`Task ${task.id}: ${task.inputFiles.join(', ')} -> ${task.outputFile}`);
+        logger_1.logger.task(`Task ${task.id}: ${task.inputFiles.join(', ')} -> ${task.outputFile}`);
         // Ensure output dir exists
         const path = await import('path');
         const fs = await import('fs');
@@ -29,9 +30,9 @@ async function runJobFromConfig(config, opts = {}) {
                 outputFile: task.outputFile,
                 probe
             });
-            opts.onLog?.(`Running step "${step.action}"...`);
+            logger_1.logger.step(`Running step "${step.action}"...`);
             await (0, executor_1.runFfmpeg)(args, { dryRun: opts.dryRun, onLog: opts.onLog });
         }
     }
-    opts.onLog?.('Job complete');
+    logger_1.logger.success('Job complete');
 }

@@ -1,11 +1,12 @@
-import fg from "fast-glob";
-import path from "path";
-import { JobConfigValidated } from "../yaml/schema";
-import { PlannedJob, Task } from "../domain/Job";
-import crypto from "crypto";
+import fg from 'fast-glob';
+import path from 'path';
+import { JobConfigValidated } from '../yaml/schema';
+import { PlannedJob, Task } from '../domain/Job';
+import crypto from 'crypto';
+import { logger } from '../logger';
 
 function generateId() {
-  return crypto.randomBytes(8).toString("hex");
+  return crypto.randomBytes(8).toString('hex');
 }
 
 function normalizeBasename(
@@ -28,15 +29,18 @@ function substituteFilename(
   params: { basename: string; ext: string }
 ): string {
   return pattern
-    .replace("{basename}", params.basename)
-    .replace("{ext}", params.ext);
+    .replace('{basename}', params.basename)
+    .replace('{ext}', params.ext);
 }
 
-export async function planJob(config: JobConfigValidated): Promise<PlannedJob> {
+export async function planJob(
+  config: JobConfigValidated,
+  onLog?: (msg: string) => void
+): Promise<PlannedJob> {
   const { job } = config;
 
   if (job.for_each && job.for_each_pairs) {
-    throw new Error("Config cannot have both for_each and for_each_pairs");
+    throw new Error('Config cannot have both for_each and for_each_pairs');
   }
 
   const tasks: Task[] = [];
@@ -73,7 +77,7 @@ export async function planJob(config: JobConfigValidated): Promise<PlannedJob> {
     for (const a of audioFiles) {
       const base = path.basename(a, path.extname(a));
       const normalized =
-        pairBy === "normalized_basename"
+        pairBy === 'normalized_basename'
           ? normalizeBasename(
               base,
               normalize?.audio?.remove_prefix,
@@ -86,7 +90,7 @@ export async function planJob(config: JobConfigValidated): Promise<PlannedJob> {
     for (const v of videoFiles) {
       const base = path.basename(v, path.extname(v));
       const normalized =
-        pairBy === "normalized_basename"
+        pairBy === 'normalized_basename'
           ? normalizeBasename(
               base,
               normalize?.video?.remove_prefix,
@@ -94,7 +98,10 @@ export async function planJob(config: JobConfigValidated): Promise<PlannedJob> {
             )
           : base;
       const audio = audioMap.get(normalized);
-      if (!audio) continue; // or warn
+      if (!audio) {
+        onLog?.(`No audio found for video: ${v}`);
+        continue; // or warn
+      }
 
       const ext = path.extname(v).slice(1);
       const outName = substituteFilename(job.output.filename, {
@@ -112,7 +119,7 @@ export async function planJob(config: JobConfigValidated): Promise<PlannedJob> {
       });
     }
   } else {
-    throw new Error("Config must have either for_each or for_each_pairs");
+    throw new Error('Config must have either for_each or for_each_pairs');
   }
 
   return {

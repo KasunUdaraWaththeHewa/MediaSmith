@@ -25,7 +25,7 @@ function substituteFilename(pattern, params) {
         .replace("{basename}", params.basename)
         .replace("{ext}", params.ext);
 }
-async function planJob(config) {
+async function planJob(config, onLog) {
     const { job } = config;
     if (job.for_each && job.for_each_pairs) {
         throw new Error("Config cannot have both for_each and for_each_pairs");
@@ -71,8 +71,10 @@ async function planJob(config) {
                 ? normalizeBasename(base, normalize?.video?.remove_prefix, normalize?.video?.remove_suffix)
                 : base;
             const audio = audioMap.get(normalized);
-            if (!audio)
+            if (!audio) {
+                onLog?.(`No audio found for video: ${v}`);
                 continue; // or warn
+            }
             const ext = path_1.default.extname(v).slice(1);
             const outName = substituteFilename(job.output.filename, {
                 basename: normalized,
