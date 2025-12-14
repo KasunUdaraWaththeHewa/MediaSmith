@@ -1,10 +1,10 @@
-import { BaseStep } from './Step';
+import { Step } from './Step';
 
 export interface Task {
   id: string;
   inputFiles: string[]; // [video] or [video, audio]
   outputFile: string;
-  steps: BaseStep[];
+  steps: Step[];
   basename: string;
 }
 

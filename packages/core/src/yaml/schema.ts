@@ -1,13 +1,14 @@
 import { z } from 'zod';
+import { StepAction } from '../domain/Step';
 
 export const StepSchema = z.object({
   action: z.enum([
-    'compress_video',
-    'merge_audio',
-    'extract_audio',
-    'trim',
-    'normalize_audio',
-    'dedupe_media'
+    StepAction.CompressVideo,
+    StepAction.MergeAudio,
+    StepAction.ExtractAudio,
+    StepAction.Trim,
+    StepAction.NormalizeAudio,
+    StepAction.DedupeMedia
   ])
   // .passthrough() allows extra fields depending on action
 }).passthrough();

@@ -1,19 +1,11 @@
 import { VideoProbeInfo } from '../ffprobe';
+import { VideoProfile, Quality, QualityLevels, QualityToCrf, VideoProfiles } from '../constants';
 
 export interface CompressVideoStep {
   action: 'compress_video';
-  profile?: 'whatsapp' | 'youtube_hd';
-  quality?: 'low' | 'medium' | 'high';
+  profile?: VideoProfile;
+  quality?: Quality;
   max_size_mb?: number;
-}
-
-type Quality = 'low' | 'medium' | 'high';
-
-function qualityToCrf(q: Quality | undefined): number {
-  if (!q) return 23;
-  if (q === 'high') return 20;
-  if (q === 'low') return 28;
-  return 23;
 }
 
 export function buildCompressVideoArgs(
@@ -29,12 +21,12 @@ export function buildCompressVideoArgs(
   let width = probe.width;
   let targetBitrateK = 2000;
 
-  if (step.profile === 'whatsapp') {
+  if (step.profile === VideoProfiles.WhatsApp) {
     width = Math.min(width, 960);
     targetBitrateK = 800;
-  } else if (step.profile === 'youtube_hd') {
+  } else if (step.profile === VideoProfiles.YouTubeHD) {
     width = 1920;
-    targetBitrateK = step.quality === 'high' ? 8000 : 5000;
+    targetBitrateK = step.quality === QualityLevels.High ? 8000 : 5000;
   }
 
   if (width && width !== probe.width) {
@@ -49,7 +41,7 @@ export function buildCompressVideoArgs(
     targetBitrateK = Math.min(targetBitrateK, kbps);
     args.push('-b:v', `${targetBitrateK}k`);
   } else {
-    const crf = qualityToCrf(step.quality);
+    const crf = QualityToCrf[step.quality ?? QualityLevels.Medium];
     args.push('-crf', String(crf));
   }
 
