@@ -9,7 +9,8 @@
   ],
   "scripts": {
     "build": "npm run build -w @mediasmith/core && npm run build -w @mediasmith/cli",
-    "test": "npm test -w @mediasmith/core"
+    "test": "npm test -w @mediasmith/core",
+    "prepare": "husky install"
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,12 @@
     "yaml": "^2.8.2"
   },
   "devDependencies": {
-    "@types/node": "^25.0.0"
+    "@types/node": "^25.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0"
+  },
+  "lint-staged": {
+    "*.{js,ts,json,md,yml,yaml}": "prettier --write"
   }
 }
