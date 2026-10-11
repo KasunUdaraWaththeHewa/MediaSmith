@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import type { Task } from '../domain/Job';
-import { prepareActionStep } from '../ffmpeg/actions';
+import type { PreparedTask, Task } from '../domain/Job';
 import { runFfmpeg } from '../ffmpeg/executor';
 import { ffprobeVideo } from '../ffmpeg/ffprobe';
 import type { VideoProbeInfo } from '../ffmpeg/ffprobe';
@@ -12,7 +11,11 @@ export interface RunOptions {
   onLog?: (message: string) => void;
 }
 
-function temporaryOutputFor(task: Task, stepIndex: number, extension: string): string {
+function temporaryOutputFor(
+  task: Pick<Task, 'id' | 'outputFile'>,
+  stepIndex: number,
+  extension: string
+): string {
   const name = path.basename(task.outputFile, path.extname(task.outputFile));
   return path.join(
     path.dirname(task.outputFile),
@@ -31,16 +34,16 @@ async function removeTemporaryFiles(files: string[], onLog?: RunOptions['onLog']
   }
 }
 
-export async function runTask(task: Task, options: RunOptions): Promise<void> {
+export async function runTask(task: PreparedTask, options: RunOptions): Promise<void> {
   options.onLog?.(`Task ${task.id}: ${task.inputFiles.join(', ')} -> ${task.outputFile}`);
   const temporaryFiles: string[] = [];
   let currentInput = task.inputFiles[0];
   let activeStep: { index: number; action: string } | undefined;
 
   try {
-    const preparedSteps = task.steps.map(prepareActionStep);
+    const preparedSteps = task.steps;
     let previewProbe: VideoProbeInfo | undefined;
-    if (options.dryRun && preparedSteps.some((step) => step.needsProbe)) {
+    if (options.dryRun && preparedSteps.some((step) => step.handler.needsProbe)) {
       previewProbe = await ffprobeVideo(currentInput);
     }
 
@@ -48,8 +51,8 @@ export async function runTask(task: Task, options: RunOptions): Promise<void> {
       await fs.promises.mkdir(path.dirname(task.outputFile), { recursive: true });
     }
 
-    for (const [index, action] of preparedSteps.entries()) {
-      const step = task.steps[index];
+    for (const [index, step] of preparedSteps.entries()) {
+      const action = step.handler;
       activeStep = { index, action: step.action };
       const isFinalStep = index === task.steps.length - 1;
       const extension = isFinalStep ? path.extname(task.outputFile) : action.defaultExtension;
@@ -80,9 +83,9 @@ export async function runTask(task: Task, options: RunOptions): Promise<void> {
     }
 
     if (!options.dryRun) {
-      for (const [index, action] of preparedSteps.entries()) {
+      for (const [index, step] of preparedSteps.entries()) {
         activeStep = { index, action: task.steps[index].action };
-        await action.validateOutput(currentInput);
+        await step.handler.validateOutput(currentInput);
       }
       activeStep = undefined;
       await fs.promises.rename(currentInput, task.outputFile);

@@ -1,9 +1,8 @@
 # MediaSmith – Roadmap
 
-For implementation order and release gates, see [feature-plan.md](feature-plan.md).
+This is an idea bank. [feature-plan.md](feature-plan.md) is the source of truth for implementation status and release order; the [README](README.md) lists executable actions. YAML examples for planned features are proposals.
 
-This document tracks planned features for MediaSmith and how they fit into the
-existing architecture (YAML → engine → ffmpeg).
+The ideas describe how features could fit into the existing architecture (YAML → engine → ffmpeg).
 
 Goal: keep adding power **without breaking** existing YAML configs or CLI usage.
 
@@ -11,26 +10,11 @@ Goal: keep adding power **without breaking** existing YAML configs or CLI usage.
 
 ## 1. New Actions (Step Types)
 
-These are new values for `steps[].action` that can be added **without breaking** current configs.
+New values for `steps[].action` should preserve current configs.
 
-### 1.1 `extract_audio`
+### 1.1 `extract_audio` (implemented)
 
-**Use case:** Convert videos (lectures, screen recordings, talks) into audio (podcasts, MP3 notes).
-
-**YAML:**
-
-```yaml
-steps:
-  - action: extract_audio
-    format: mp3          # mp3 | wav | flac | etc.
-    quality: medium      # or: bitrate: "128k"
-````
-
-**Implementation notes:**
-
-* Map to `ffmpeg -vn` (no video) and selected audio codec.
-* Add `extractAudio.ts` under `ffmpeg/actions`.
-* Use safe defaults (e.g., medium-quality MP3).
+`extract_audio` supports MP3, WAV, and FLAC. See [README.md](README.md) and [CONFIGURATION.md](CONFIGURATION.md) for current usage.
 
 ---
 
@@ -54,14 +38,14 @@ Keep only a segment:
 ```yaml
 steps:
   - action: trim
-    start: "00:00:10"
-    end: "00:01:00"
+    start: '00:00:10'
+    end: '00:01:00'
 ```
 
 **Implementation notes:**
 
-* Use `-ss` and `-to` / `-t`.
-* When `remove_*` is used, probe duration and compute effective start + length.
+- Use `-ss` and `-to` / `-t`.
+- When `remove_*` is used, probe duration and compute effective start + length.
 
 ---
 
@@ -74,15 +58,16 @@ steps:
 ```yaml
 steps:
   - action: normalize_audio
-    level: podcast       # default | podcast | aggressive
+    level: podcast # default | podcast | aggressive
 ```
 
 **Implementation notes:**
 
-* Wrap ffmpeg `loudnorm` filter with presets, e.g.:
+- Wrap ffmpeg `loudnorm` filter with presets, e.g.:
 
-  * `podcast` → `I=-16:TP=-1.5:LRA=11`.
-* Start with one-pass loudnorm; consider two-pass later.
+  - `podcast` → `I=-16:TP=-1.5:LRA=11`.
+
+- Start with one-pass loudnorm; consider two-pass later.
 
 ---
 
@@ -97,13 +82,13 @@ steps:
   - action: split_video
     segment_seconds: 60
     overlap_seconds: 0
-    output_pattern: "{basename}_part{index}.mp4"
+    output_pattern: '{basename}_part{index}.mp4'
 ```
 
 **Implementation notes:**
 
-* Use ffmpeg segment muxer (`-f segment -segment_time`) or loop with `-ss/-t`.
-* Decide how to represent multiple outputs per input in the engine.
+- Use ffmpeg segment muxer (`-f segment -segment_time`) or loop with `-ss/-t`.
+- Decide how to represent multiple outputs per input in the engine.
 
 ---
 
@@ -116,14 +101,14 @@ steps:
 ```yaml
 steps:
   - action: concat_videos
-    from_glob: "input/session1/parts/*.mp4"
-    order: "by_name"     # future: "from_list"
+    from_glob: 'input/session1/parts/*.mp4'
+    order: 'by_name' # future: "from_list"
 ```
 
 **Implementation notes:**
 
-* Use ffmpeg concat demuxer with a generated list file.
-* Likely used in jobs that operate on a folder/session rather than per input file.
+- Use ffmpeg concat demuxer with a generated list file.
+- Likely used in jobs that operate on a folder/session rather than per input file.
 
 ---
 
@@ -137,14 +122,14 @@ steps:
 steps:
   - action: generate_thumbnails
     at_seconds: [5, 30, 60]
-    output_pattern: "thumbs/{basename}_{time}.jpg"
+    output_pattern: 'thumbs/{basename}_{time}.jpg'
     width: 640
 ```
 
 **Implementation notes:**
 
-* Use `-ss` + `-vframes 1` per timestamp or `-vf fps`.
-* Decide how to report multiple outputs back to the user (log / JSON).
+- Use `-ss` + `-vframes 1` per timestamp or `-vf fps`.
+- Decide how to report multiple outputs back to the user (log / JSON).
 
 ---
 
@@ -157,14 +142,14 @@ steps:
 ```yaml
 steps:
   - action: speed_change
-    factor: 1.25        # >1 faster, <1 slower
+    factor: 1.25 # >1 faster, <1 slower
     pitch_correct: true
 ```
 
 **Implementation notes:**
 
-* Use `setpts` for video and `atempo` for audio.
-* Limit `atempo` (e.g., chain if factor > 2).
+- Use `setpts` for video and `atempo` for audio.
+- Limit `atempo` (e.g., chain if factor > 2).
 
 ---
 
@@ -180,7 +165,7 @@ Extract:
 steps:
   - action: subtitle_extract
     format: srt
-    output_pattern: "subs/{basename}.srt"
+    output_pattern: 'subs/{basename}.srt'
 ```
 
 Burn-in:
@@ -188,14 +173,14 @@ Burn-in:
 ```yaml
 steps:
   - action: subtitle_burn
-    subtitle_file: "subs/{basename}.srt"
+    subtitle_file: 'subs/{basename}.srt'
     font_size: 24
 ```
 
 **Implementation notes:**
 
-* Extract via `-map 0:s:0`.
-* Burn via `-vf subtitles=...`.
+- Extract via `-map 0:s:0`.
+- Burn via `-vf subtitles=...`.
 
 ---
 
@@ -211,16 +196,16 @@ steps:
 steps:
   - action: dedupe_media
     mode: image_and_video
-    report: "output/dedupe_report.json"
+    report: 'output/dedupe_report.json'
     image_threshold: 5
     video_frame_sample_rate: 1
 ```
 
 **Implementation notes:**
 
-* Use perceptual hashing for images.
-* Sample frames for video and hash them.
-* Group similar items and output a JSON report.
+- Use perceptual hashing for images.
+- Sample frames for video and hash them.
+- Group similar items and output a JSON report.
 
 ---
 
@@ -236,56 +221,36 @@ mediasmith watch templates/whatsapp_batch.yml --input "incoming"
 
 **Implementation notes:**
 
-* Use `chokidar` or `fs.watch`.
-* For MVP: simple pattern matching; later add debounce / batching.
+- Use `chokidar` or `fs.watch`.
+- For MVP: simple pattern matching; later add debounce / batching.
 
 ---
 
 ## 3. Template System Enhancements
 
-### 3.1 Normalized pairing rules
+### 3.1 Normalized pairing rules (implemented)
 
-Real case:
-
-* Video: `010-000-containers-overview (720p No Audio).mp4`
-* Audio: `010-000-containers-overview-audio.mp4`
-
-**YAML:**
-
-```yaml
-for_each_pairs:
-  video_pattern: "input/video/**/*.mp4"
-  audio_pattern: "input/audio/**/*.mp4"
-  pair_by: normalized_basename
-  normalize:
-    video:
-      remove_suffix: " (720p No Audio)"
-    audio:
-      remove_suffix: "-audio"
-```
-
-**Implementation notes:**
-
-* Extend Zod schema to include `normalize`.
-* When `normalize` is absent, keep old `basename` pairing behavior.
+Normalized basename pairing is implemented. See [templates/merge_external_audio_normalize_basenames.yml](templates/merge_external_audio_normalize_basenames.yml) for a current example.
 
 ---
 
-### 3.2 Variables & CLI overrides
+### 3.2 Variables and `--var` (planned)
+
+Current jobs already support grouped settings and `--set` overrides. Declared variables and `--var` remain proposals.
 
 **YAML:**
 
 ```yaml
 version: 1
 job:
-  name: "parametrized_compress"
+  name: 'parametrized_compress'
 
   for_each:
-    glob: "${INPUT_GLOB}"
+    glob: '${INPUT_GLOB}'
 
   output:
-    directory: "${OUTPUT_DIR}"
-    filename: "{basename}_wa.mp4"
+    directory: '${OUTPUT_DIR}'
+    filename: '{basename}_wa.mp4'
 
   steps:
     - action: compress_video
@@ -304,8 +269,8 @@ mediasmith run templates/param.yml \
 
 **Implementation notes:**
 
-* Replace `${VAR}` placeholders from a provided variables map.
-* Allow environment variable fallback.
+- Replace `${VAR}` placeholders from a provided variables map.
+- Allow environment variable fallback.
 
 ---
 
@@ -317,7 +282,7 @@ mediasmith run templates/param.yml \
 # templates/base_whatsapp.yml
 version: 1
 job:
-  name: "base_whatsapp"
+  name: 'base_whatsapp'
   steps:
     - action: compress_video
       profile: whatsapp
@@ -330,20 +295,20 @@ job:
 ```yaml
 # templates/whatsapp_for_folder.yml
 version: 1
-extends: "base_whatsapp.yml"
+extends: 'base_whatsapp.yml'
 job:
-  name: "whatsapp_for_folder"
+  name: 'whatsapp_for_folder'
   for_each:
-    glob: "input/**/*.mp4"
+    glob: 'input/**/*.mp4'
   output:
-    directory: "output/whatsapp"
-    filename: "{basename}_wa.mp4"
+    directory: 'output/whatsapp'
+    filename: '{basename}_wa.mp4'
 ```
 
 **Implementation notes:**
 
-* Resolve `extends` at YAML load time.
-* Merge base + child configs; child overrides specific fields.
+- Resolve `extends` at YAML load time.
+- Merge base + child configs; child overrides specific fields.
 
 ---
 
@@ -370,8 +335,8 @@ mediasmith run templates/whatsapp_batch.yml --concurrency 4
 
 **Implementation notes:**
 
-* Implement a simple worker pool / task queue.
-* Default concurrency should be safe (e.g., 1 or 2).
+- Implement a simple worker pool / task queue.
+- Default concurrency should be safe (e.g., 1 or 2).
 
 ---
 
@@ -396,8 +361,8 @@ mediasmith run config.yml --json
 
 **Implementation notes:**
 
-* Add a logging abstraction; switch between human-readable and JSON.
-* Useful for a future Tauri/React desktop UI.
+- Add a logging abstraction; switch between human-readable and JSON.
+- Useful for a future Tauri/React desktop UI.
 
 ---
 
@@ -410,5 +375,7 @@ All roadmap items should follow these rules:
 3. **Add new actions and optional fields with safe defaults.**
 4. Use `version` in YAML for any truly breaking behavior in the future.
 5. Keep existing example templates running unchanged.
+
+```
 
 ```

@@ -1,0 +1,25 @@
+name: Bug report
+description: Report a reproducible MediaSmith problem
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include the actual result and the result you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: YAML config and command
+      description: Remove private paths or names before posting.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Versions
+      description: Include your operating system, Node.js version, and ffmpeg/ffprobe versions.
+    validations:
+      required: true

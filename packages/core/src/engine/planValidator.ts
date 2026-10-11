@@ -1,5 +1,5 @@
 import path from 'path';
-import type { PlannedJob, Task } from '../domain/Job';
+import type { PlannedJob, PreparedJob, PreparedStep, PreparedTask, Task } from '../domain/Job';
 import { prepareActionStep } from '../ffmpeg/actions';
 
 function pathKey(file: string): string {
@@ -7,10 +7,12 @@ function pathKey(file: string): string {
   return process.platform === 'win32' ? absolute.toLowerCase() : absolute;
 }
 
-function validateTaskSteps(task: Task): void {
+function prepareTask(task: Task): PreparedTask {
   let currentKind: 'video' | 'audio' = 'video';
+  const preparedSteps: PreparedStep[] = [];
   for (const [index, step] of task.steps.entries()) {
     const action = prepareActionStep(step);
+    preparedSteps.push({ action: step.action, handler: action });
     if (action.inputKind !== currentKind) {
       throw new Error(
         `${step.action} expects ${action.inputKind} input after a ${currentKind} step`
@@ -30,17 +32,20 @@ function validateTaskSteps(task: Task): void {
       }
     }
   }
+  return { ...task, steps: preparedSteps };
 }
 
-export function validatePlan(job: PlannedJob): void {
+export function validatePlan(job: PlannedJob): PreparedJob {
   const outputs = new Set<string>();
   const inputs = new Set(job.tasks.flatMap((task) => task.inputFiles.map(pathKey)));
+  const tasks: PreparedTask[] = [];
   for (const task of job.tasks) {
     const output = pathKey(task.outputFile);
     if (outputs.has(output)) throw new Error(`Multiple tasks would write to ${task.outputFile}`);
     outputs.add(output);
     if (inputs.has(output))
       throw new Error(`Output may overwrite an input file: ${task.outputFile}`);
-    validateTaskSteps(task);
+    tasks.push(prepareTask(task));
   }
+  return { jobName: job.jobName, tasks };
 }

@@ -10,7 +10,7 @@ job:
     glob: input/**/*.mp4
   output:
     directory: output/mobile
-    filename: "{basename}.mp4"
+    filename: '{basename}.mp4'
   settings:
     compress_video:
       preset: fast
@@ -29,11 +29,11 @@ The complete example is [templates/custom_profile.yml](templates/custom_profile.
 
 ## Settings groups
 
-| Group | Available settings |
-| --- | --- |
+| Group            | Available settings                                                                                                                                                                                                                                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `compress_video` | `preset`, `audio_bitrate_kbps`, `default_video_bitrate_kbps`, `container_overhead_percent`, `minimum_video_bitrate_kbps`, named `profiles`, and `quality` settings for `low`, `medium`, and `high`. Each quality can set `crf` and `bitrate_factor`. |
-| `merge_audio` | `audio_bitrate_kbps`, `original_volume`, and `external_volume`. Volumes apply when `audio_source: mix`. |
-| `extract_audio` | `mp3_quality_bitrates_kbps` with optional `low`, `medium`, and `high` values. |
+| `merge_audio`    | `audio_bitrate_kbps`, `original_volume`, and `external_volume`. Volumes apply when `audio_source: mix`.                                                                                                                                              |
+| `extract_audio`  | `mp3_quality_bitrates_kbps` with optional `low`, `medium`, and `high` values.                                                                                                                                                                        |
 
 The `compress_video` step can override `max_width`, `video_bitrate_kbps`, `audio_bitrate_kbps`, and `preset` in addition to its existing `profile`, `quality`, and `max_size_mb` fields. The `merge_audio` step can override `audio_bitrate_kbps` and its mix volumes. The `extract_audio` step still accepts `bitrate` for one MP3 step.
 

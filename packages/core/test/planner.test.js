@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { JobSchema, MediaSmithError, runJobFromConfig } = require('../dist');
 const { planJob } = require('../dist/planner/batchPlanner');
+const { validatePlan } = require('../dist/engine/planValidator');
+const { runTask } = require('../dist/engine/taskRunner');
 const { inWorkspace } = require('./helpers/media');
 
 function pairedJob() {
@@ -87,5 +89,32 @@ test('planning rejects unmatched pairs and empty globs', async () => {
       }
     });
     await assert.rejects(planJob(noMatches), /No input files match/);
+  });
+});
+
+test('execution uses the action options prepared during plan validation', async () => {
+  await inWorkspace('mediasmith-plan-', async () => {
+    fs.mkdirSync('video');
+    fs.writeFileSync('video/one.mp4', 'placeholder');
+    const config = JobSchema.parse({
+      version: 1,
+      job: {
+        name: 'prepared',
+        for_each: { glob: 'video/*.mp4' },
+        output: { directory: 'audio', filename: '{basename}.mp3' },
+        steps: [{ action: 'extract_audio', format: 'mp3' }]
+      }
+    });
+    const plan = await planJob(config);
+    const prepared = validatePlan(plan);
+    plan.tasks[0].steps[0].format = 'wav';
+
+    const logs = [];
+    await runTask(prepared.tasks[0], { dryRun: true, onLog: (line) => logs.push(line) });
+    assert.match(
+      logs.find((line) => line.startsWith('ffmpeg ')),
+      /libmp3lame/
+    );
+    assert.equal(fs.existsSync('audio'), false);
   });
 });

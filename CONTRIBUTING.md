@@ -7,7 +7,7 @@ Use Node.js 20.19+, 22.13+, or 24+ for the repository tooling.
 ## Set up
 
 ```sh
-npm install
+npm ci
 npm test
 ```
 
@@ -16,23 +16,23 @@ npm test
 Try a template without writing output:
 
 ```sh
-node packages/cli/dist/index.js validate templates/compress_video.yml
-node packages/cli/dist/index.js dry-run templates/compress_video.yml
+node packages/cli/dist/index.js validate templates/whatsapp_batch.yml
+node packages/cli/dist/index.js dry-run templates/whatsapp_batch.yml
 ```
 
-The template's input glob must match files for `dry-run` to plan a job.
+The template's input glob must match files for `dry-run` to plan a job. Put a sample MP4 under `input/` before running it.
 
 ## Find the code
 
-| Area | Responsibility |
-| --- | --- |
-| `packages/cli/src` | CLI commands and `--set` arguments |
-| `packages/core/src/yaml` | YAML loading, overrides, validation, and setting groups |
-| `packages/core/src/planner` | Glob expansion, video/audio pairing, and output names |
-| `packages/core/src/engine` | Job checks, step execution, temporary files, and cleanup |
-| `packages/core/src/ffmpeg/actions` | One schema and ffmpeg argument builder per action |
-| `packages/core/src/ffmpeg` | ffmpeg execution and ffprobe parsing |
-| `packages/core/test`, `packages/cli/test` | Behavior and media integration tests |
+| Area                                      | Responsibility                                           |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `packages/cli/src`                        | CLI commands and `--set` arguments                       |
+| `packages/core/src/yaml`                  | YAML loading, overrides, validation, and setting groups  |
+| `packages/core/src/planner`               | Glob expansion, video/audio pairing, and output names    |
+| `packages/core/src/engine`                | Job checks, step execution, temporary files, and cleanup |
+| `packages/core/src/ffmpeg/actions`        | One schema and ffmpeg argument builder per action        |
+| `packages/core/src/ffmpeg`                | ffmpeg execution and ffprobe parsing                     |
+| `packages/core/test`, `packages/cli/test` | Behavior and media integration tests                     |
 
 Read [CODE_MAP.md](CODE_MAP.md) for each source file's role, [ARCHITECTURE.md](ARCHITECTURE.md) for the execution flow, [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) for extension contracts, and [CONFIGURATION.md](CONFIGURATION.md) for YAML settings and override precedence.
 
@@ -61,4 +61,4 @@ The currently implemented actions are `compress_video`, `merge_audio`, and `extr
 
 Use two-space indentation, single quotes in TypeScript, and explicit return types on public functions. Name helpers for the rule they implement. Split long functions where each part has a distinct responsibility. Keep error messages actionable and use the same wording in related code and tests. Avoid `as` casts and non-null assertions unless the invariant is documented and checked.
 
-Before opening a pull request, run `npm test` and describe any change to YAML, CLI behavior, or output media.
+Before opening a pull request, run `npm test` and describe any change to YAML, CLI behavior, or output media. CI runs the same command with ffmpeg and ffprobe installed. If you change either package's published files, build and inspect both workspaces with `npm pack --dry-run -w @mediasmith/core` and `npm pack --dry-run -w @mediasmith/cli`.

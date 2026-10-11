@@ -11,8 +11,8 @@
   ],
   "scripts": {
     "build": "npm run build -w @mediasmith/core && npm run build -w @mediasmith/cli",
-    "format": "prettier --write \"packages/{core,cli}/{src,test}/**/*.{ts,js}\" eslint.config.mjs",
-    "format:check": "prettier --check \"packages/{core,cli}/{src,test}/**/*.{ts,js}\" eslint.config.mjs",
+    "format": "prettier --write \"packages/{core,cli}/{src,test}/**/*.{ts,js}\" eslint.config.mjs \"*.md\" \"packages/{core,cli}/README.md\" \".github/**/*.{md,yml}\"",
+    "format:check": "prettier --check \"packages/{core,cli}/{src,test}/**/*.{ts,js}\" eslint.config.mjs \"*.md\" \"packages/{core,cli}/README.md\" \".github/**/*.{md,yml}\"",
     "lint": "eslint packages/core/src packages/cli/src packages/core/test packages/cli/test",
     "test": "npm run format:check && npm run lint && npm run build && node --test packages/core/test/*.test.js packages/cli/test/*.test.js"
   },

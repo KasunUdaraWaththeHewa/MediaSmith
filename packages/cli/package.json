@@ -4,8 +4,11 @@
   "bin": {
     "mediasmith": "dist/index.js"
   },
+  "files": ["dist"],
+  "license": "ISC",
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build -w @mediasmith/core && npm run build"
   },
   "dependencies": {
     "@mediasmith/core": "0.1.0",

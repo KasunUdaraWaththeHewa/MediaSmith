@@ -1,5 +1,5 @@
 import type { JobConfigValidated } from '../yaml/schema';
-import type { PlannedJob } from '../domain/Job';
+import type { PreparedJob } from '../domain/Job';
 import { planJob } from '../planner/batchPlanner';
 import { runTask, RunOptions } from './taskRunner';
 import { validatePlan } from './planValidator';
@@ -11,10 +11,9 @@ export async function runJobFromConfig(
   config: JobConfigValidated,
   opts: RunOptions = {}
 ): Promise<void> {
-  let job: PlannedJob;
+  let job: PreparedJob;
   try {
-    job = await planJob(config);
-    validatePlan(job);
+    job = validatePlan(await planJob(config));
   } catch (error) {
     throw new MediaSmithError('PLAN', errorMessage(error), { jobName: config.job.name }, error);
   }

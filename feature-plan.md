@@ -6,36 +6,36 @@ The README and existing roadmap describe additional actions. Validation now reje
 
 ## Phase 1: Reliable foundation (P0)
 
-| Feature | Status and remaining work |
-| --- | --- |
-| Action-specific validation | Implemented for registered actions and their known options. Unsupported actions fail validation. Add checks for incompatible option combinations as actions grow. |
-| Real step pipelines | Implemented with temporary files and cleanup. A real ffmpeg integration test verifies `merge_audio` followed by `compress_video` retains audible external audio. |
+| Feature                        | Status and remaining work                                                                                                                                                                                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Action-specific validation     | Implemented for registered actions and their known options. Unsupported actions fail validation. Add checks for incompatible option combinations as actions grow.                                                                                                        |
+| Real step pipelines            | Implemented with temporary files and cleanup. A real ffmpeg integration test verifies `merge_audio` followed by `compress_video` retains audible external audio.                                                                                                         |
 | Safe dry-run and output policy | Dry-run is read-only and now carries estimated metadata through supported pipelines; empty globs, unmatched/ambiguous pairs, duplicate output paths, and input/output overlap are rejected. Still add an explicit skip, error, or overwrite policy for existing outputs. |
-| Useful failures and tests | Config, plan, task, and process failures have structured context. Formatting, lint, build, validation, pairing, pipeline, and failed ffmpeg cleanup tests run through `npm test`. Expand coverage as new actions are added. |
+| Useful failures and tests      | Config, plan, task, and process failures have structured context. Formatting, lint, build, validation, pairing, pipeline, and failed ffmpeg cleanup tests run through `npm test`. Expand coverage as new actions are added.                                              |
 
 **Release gate:** Every supplied template either runs as documented or fails validation with a clear reason. Dry-run leaves the filesystem unchanged.
 
 ## Phase 2: Complete common media jobs (P1)
 
-| Feature | Done when |
-| --- | --- |
-| `extract_audio` | Implemented for MP3, WAV, and FLAC with matching output extensions. The lecture template validates; real MP3 extraction and a video-to-audio pipeline are covered by integration tests. |
-| `trim` | Supports a start/end range or removing time from the start/end; rejects negative or empty ranges. |
-| `normalize_audio` | Adds one-pass loudness presets and documents their accuracy limits. Can run after extraction in a pipeline. |
-| Job report | Optional versioned JSON report lists each task's inputs, outputs, actions, duration, status, and error. |
-| Progress and cancellation | Parses machine-readable ffmpeg progress. Ctrl+C stops child processes and cleans temporary files. |
+| Feature                   | Done when                                                                                                                                                                               |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `extract_audio`           | Implemented for MP3, WAV, and FLAC with matching output extensions. The lecture template validates; real MP3 extraction and a video-to-audio pipeline are covered by integration tests. |
+| `trim`                    | Supports a start/end range or removing time from the start/end; rejects negative or empty ranges.                                                                                       |
+| `normalize_audio`         | Adds one-pass loudness presets and documents their accuracy limits. Can run after extraction in a pipeline.                                                                             |
+| Job report                | Optional versioned JSON report lists each task's inputs, outputs, actions, duration, status, and error.                                                                                 |
+| Progress and cancellation | Parses machine-readable ffmpeg progress. Ctrl+C stops child processes and cleans temporary files.                                                                                       |
 
 **Release gate:** Each new action works alone and in supported pipelines; users can identify failed items without reading raw ffmpeg logs.
 
 ## Phase 3: Scale and reuse (P2)
 
-| Feature | Done when |
-| --- | --- |
-| Bounded concurrency | `job.concurrency` and `--concurrency` limit simultaneous ffmpeg processes; report order remains stable. |
-| Resume and skip unchanged | A manifest records input fingerprints and config/action version; reruns skip only verified unchanged outputs and retry failures. |
-| Variables and overrides | Grouped `job.settings` and repeatable `--set path=value` are implemented. Declared reusable variables and `--var KEY=value` remain future work. |
-| Flexible pairing | Regex capture groups or a mapping file support different camera/recorder names; ambiguous matches are reported. |
-| Template discovery | `list-templates` and `init <template>` expose bundled, executable examples with parameter descriptions. |
+| Feature                   | Done when                                                                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bounded concurrency       | `job.concurrency` and `--concurrency` limit simultaneous ffmpeg processes; report order remains stable.                                         |
+| Resume and skip unchanged | A manifest records input fingerprints and config/action version; reruns skip only verified unchanged outputs and retry failures.                |
+| Variables and overrides   | Grouped `job.settings` and repeatable `--set path=value` are implemented. Declared reusable variables and `--var KEY=value` remain future work. |
+| Flexible pairing          | Regex capture groups or a mapping file support different camera/recorder names; ambiguous matches are reported.                                 |
+| Template discovery        | `list-templates` and `init <template>` expose bundled, executable examples with parameter descriptions.                                         |
 
 **Release gate:** Interrupted large batches resume without duplicating work, and plans keep the same output mapping across reruns.
 

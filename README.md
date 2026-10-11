@@ -1,447 +1,75 @@
 # MediaSmith
 
-> 🛠️ YAML-driven helper for **ffmpeg** – focused on **batch work**, **audio+video pairing**, and **human-readable configs**.
+MediaSmith is a YAML-driven CLI for batch media work with ffmpeg. A job selects files, names the outputs, and runs one or more actions in order.
 
-MediaSmith is a CLI tool that lets you describe media operations in **simple YAML** and have it automatically:
+## Supported today
 
-- Expand file globs / pairs (video + audio)
-- Turn high-level **“actions”** into the correct ffmpeg commands
-- Run them in bulk with sensible defaults
+| Action           | Purpose                                               | Input and output         |
+| ---------------- | ----------------------------------------------------- | ------------------------ |
+| `compress_video` | Compress or resize video, optionally to a size target | Video to video           |
+| `merge_audio`    | Replace or mix camera audio with a paired recording   | Video and audio to video |
+| `extract_audio`  | Export MP3, WAV, or FLAC audio                        | Video to audio           |
 
-> **Current implementation:** `run`, `dry-run`, and `validate` support `compress_video`, `merge_audio`, and `extract_audio`. Other actions described below are planned and fail validation until implemented. `validate` checks YAML structure and options; `dry-run` also checks matched inputs and output paths. See [CODE_MAP.md](CODE_MAP.md) for the current files, [ARCHITECTURE.md](ARCHITECTURE.md) for the execution flow, [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) for extension guidance, and [feature-plan.md](feature-plan.md) for planned features.
+The commands are `validate`, `dry-run`, and `run`. Jobs support file globs, video/audio pairing by basename or normalized basename, multi-step pipelines, grouped settings, and repeatable `--set` overrides. Unsupported action names and fields fail validation.
 
-Shared settings can be grouped in YAML and overridden with `--set` on every CLI command. See [CONFIGURATION.md](CONFIGURATION.md) and [templates/custom_profile.yml](templates/custom_profile.yml) for examples and precedence.
+Features such as trimming, normalization, thumbnails, and multiple output files are proposals. See [feature-plan.md](feature-plan.md) for current status and [roadmap.md](roadmap.md) for ideas.
 
-Current video outputs use `.mp4`, `.m4v`, `.mov`, or `.mkv`. `extract_audio` outputs `.mp3`, `.wav`, or `.flac`, matching its `format`. Output filenames support `{basename}` and `{ext}`. Misspelled fields, unsupported placeholders, empty file matches, and unmatched media pairs fail with an error. `max_size_mb` reserves bitrate for audio and checks the final file size; if the target cannot be met, the job fails instead of reporting an oversized file as successful.
+## Requirements and setup
 
-You write **what you want**, not every ffmpeg flag.
+- Node.js 20.19+, 22.13+, or 24+ (matching [package.json](package.json))
+- npm
+- ffmpeg and ffprobe on `PATH` for media jobs and integration tests
 
----
-
-## ✨ Features (MVP scope)
-
-- **High-level YAML configs**  
-  - No need to know ffmpeg syntax for common tasks
-  - Use actions like `compress_video`, `merge_audio`, `trim`, etc.
-
-- **Batch processing**
-  - Process whole folders via `for_each.glob`
-  - Run multi-step pipelines per file
-
-- **Audio + video pairing**
-  - `for_each_pairs` with `pair_by: basename`
-  - Perfect for camera video + external recorder audio workflows
-
-- **Common scenarios (via actions)**
-  - Compress videos for different “profiles” (e.g., WhatsApp, YouTube HD)
-  - Merge external audio into camera video (replace or mix)
-  - Extract audio from videos
-  - Trim intro/outro segments from many files
-  - Normalize audio loudness (e.g., podcast style)
-
-- **Extensible**
-  - Add new actions in TypeScript
-  - Create new YAML configs without touching code
-
-> **Note:** Right now MediaSmith is CLI-only by design. A desktop GUI (Tauri + React) can be layered on top later using the same core.
-
----
-
-## 🧩 Requirements
-
-- **Node.js** ≥ 18
-- **pnpm / npm / yarn** (for development)
-- **ffmpeg** and **ffprobe** installed and on your `PATH`  
-  Check with:
-  ```bash
-  ffmpeg -version
-  ffprobe -version
-
----
-
-## 📦 Installation (dev / local)
-
-Clone the repo:
-
-```bash
-git clone https://github.com/KasunUdaraWaththeHewa/MediaSmith
-cd mediasmith
+```sh
+git clone https://github.com/KasunUdaraWaththeHewa/MediaSmith.git
+cd MediaSmith
+npm ci
+npm run build
+node packages/cli/dist/index.js --help
 ```
 
-Install dependencies (example with **pnpm**):
+## Try a job
 
-```bash
-pnpm install
+Save a small MP4 as `input/example.mp4`, then use the included [WhatsApp template](templates/whatsapp_batch.yml):
+
+```sh
+node packages/cli/dist/index.js validate templates/whatsapp_batch.yml
+node packages/cli/dist/index.js dry-run templates/whatsapp_batch.yml
+node packages/cli/dist/index.js run templates/whatsapp_batch.yml
 ```
 
-Build the core & CLI:
+`validate` checks the YAML and action options. `dry-run` also expands the input glob, checks the plan, and prints the ffmpeg commands without writing output. `run` writes the processed file to `output/whatsapp/`.
 
-```bash
-pnpm build
-```
-
-Link the CLI globally (so `mediasmith` command is available):
-
-```bash
-cd packages/cli
-pnpm link --global
-# or: npm link --global
-```
-
-Now you should be able to run:
-
-```bash
-mediasmith --help
-```
-
----
-
-## 🚀 Quick Start
-
-### 1. Create a YAML config
-
-Example: `templates/whatsapp_batch.yml`
+Here is the job shape:
 
 ```yaml
 version: 1
 job:
-  name: "batch_compress_for_whatsapp"
-
+  name: example
   for_each:
-    glob: "input/**/*.mp4"
-
+    glob: input/**/*.mp4
   output:
-    directory: "output/whatsapp"
-    filename: "{basename}_wa.mp4"
-
+    directory: output/whatsapp
+    filename: '{basename}_wa.mp4'
   steps:
     - action: compress_video
-      profile: whatsapp    # maps to sensible resolution/bitrate defaults
-      max_size_mb: 16
-      quality: medium      # low | medium | high
-```
-
-### 2. Run the job
-
-```bash
-mediasmith run templates/whatsapp_batch.yml
-```
-
-MediaSmith will:
-
-1. Expand `input/**/*.mp4`
-2. For each file:
-
-   * Compute `{basename}`
-   * Build `output/whatsapp/{basename}_wa.mp4`
-   * Apply `compress_video` using the `whatsapp` profile
-
-### 3. Dry run (see what would happen)
-
-```bash
-mediasmith dry-run templates/whatsapp_batch.yml
-```
-
-This prints the tasks / ffmpeg commands without executing them.
-
----
-
-## 🧾 YAML Config Basics
-
-MediaSmith configs are **high-level descriptions** of a job.
-You generally define:
-
-* what files to process (`for_each` / `for_each_pairs`)
-* where results should go (`output`)
-* which **steps/actions** to perform (`steps`)
-
-### Top-level structure
-
-```yaml
-version: 1
-job:
-  name: "human_readable_name"
-
-  # Choose one:
-  for_each:
-    glob: "input/**/*.mp4"
-
-  # OR:
-  # for_each_pairs:
-  #   video_pattern: "input/video/**/*.mp4"
-  #   audio_pattern: "input/audio/**/*.wav"
-  #   pair_by: basename
-
-  output:
-    directory: "output/path"
-    filename: "{basename}_processed.mp4"
-
-  steps:
-    - action: compress_video
-      ...
-
-    - action: merge_audio
-      ...
-```
-
----
-
-### 🔍 `for_each` (batch over single files)
-
-```yaml
-for_each:
-  glob: "input/**/*.mp4"
-```
-
-* Uses glob patterns (`fast-glob`) to find inputs
-* Each file becomes a separate **task**
-
-Available placeholders (inside `output.filename`):
-
-* `{basename}` – filename without extension (`video1`)
-* `{ext}` – original extension (`mp4`)
-
----
-
-### 🎧 `for_each_pairs` (video + audio pairing)
-
-```yaml
-for_each_pairs:
-  video_pattern: "input/video/**/*.mp4"
-  audio_pattern: "input/audio/**/*.wav"
-  pair_by: basename   # video1.mp4 ↔ video1.wav
-```
-
-MediaSmith will:
-
-* Find all matching videos and audios
-* Pair them by basename (`video1`, `video2`, …)
-* Each pair becomes a task with **two inputs**: `[video, audio]`
-
-Example combined with steps:
-
-```yaml
-version: 1
-job:
-  name: "sync_camera_and_recorder"
-
-  for_each_pairs:
-    video_pattern: "input/video/**/*.mp4"
-    audio_pattern: "input/audio/**/*.wav"
-    pair_by: basename
-
-  output:
-    directory: "output/merged"
-    filename: "{basename}_merged.mp4"
-
-  steps:
-    - action: merge_audio
-      audio_source: external_only   # or "mix"
-
-    - action: compress_video
-      profile: youtube_hd
-      quality: high
-```
-
----
-
-## 🧱 Actions (Steps)
-
-Each `step` describes **what** to do in human terms.
-MediaSmith knows **how** to translate that into ffmpeg commands.
-
-### 1. `compress_video`
-
-Compress and/or resize video with high-level settings.
-
-```yaml
-- action: compress_video
-  profile: whatsapp          # whatsapp | youtube_hd | tiktok_vertical | custom
-  max_size_mb: 16            # optional target size
-  quality: medium            # low | medium | high
-```
-
-Internally, MediaSmith will:
-
-* Probe video metadata (duration, resolution)
-* Decide on:
-
-  * resolution (e.g., max width 960 for `whatsapp`)
-  * bitrate vs CRF depending on `max_size_mb`
-* Build an ffmpeg command with `libx264`, AAC audio, etc.
-
----
-
-### 2. `merge_audio`
-
-Merge external audio with video (replace or mix).
-
-```yaml
-- action: merge_audio
-  audio_source: external_only   # external_only | mix
-  original_volume: 0.3          # used if mix
-  external_volume: 1.0
-```
-
-Typical use case:
-
-* Camera video (`video_pattern`) + recorder audio (`audio_pattern`)
-* Pair by `basename`
-* Replace camera audio with recorder’s audio, or mix both.
-
----
-
-### 3. `trim`
-
-Remove fixed intros/outros from every file.
-
-```yaml
-- action: trim
-  remove_start_seconds: 3
-  remove_end_seconds: 5
-```
-
-MediaSmith will:
-
-* Probe video duration
-* Compute effective `ss` and `t` for ffmpeg to trim from both ends.
-
----
-
-### 4. `extract_audio`
-
-Extract audio track from video into a separate file.
-
-```yaml
-- action: extract_audio
-  format: mp3         # mp3 | wav | flac (etc., depending on how you implement)
-  quality: high       # or bitrate: "128k"
-```
-
-Example job:
-
-```yaml
-version: 1
-job:
-  name: "lectures_to_podcast"
-
-  for_each:
-    glob: "input/lectures/**/*.mp4"
-
-  output:
-    directory: "output/audio"
-    filename: "{basename}.mp3"
-
-  steps:
-    - action: extract_audio
-      format: mp3
+      profile: whatsapp
       quality: medium
+      max_size_mb: 16
 ```
 
----
+Use `for_each_pairs` for external audio. The [merge template](templates/merge_external_audio.yml) shows its shape. Output filenames support `{basename}` and `{ext}`. The final extension must match the last action.
 
-### 5. `normalize_audio`
+Set shared options under `job.settings`, step-specific options on a step, or override an exact YAML field from the command line:
 
-Loudness normalization (e.g., podcasts).
-
-```yaml
-- action: normalize_audio
-  level: podcast   # or: default, aggressive
+```sh
+node packages/cli/dist/index.js dry-run templates/custom_profile.yml --set settings.compress_video.profiles.mobile.max_width=480 --set output.directory=output/preview
 ```
 
-This wraps ffmpeg’s `loudnorm` filter with sensible presets.
+See [CONFIGURATION.md](CONFIGURATION.md) for fields, defaults, and precedence. A `dry-run` needs the template's input glob to match files.
 
----
+## Contributing and project layout
 
-### 6. `dedupe_media` (optional module)
+Run `npm test` before opening a pull request. It checks formatting, lint, build, and behavior tests. Media integration tests require ffmpeg and ffprobe; CI installs both and runs them. Start with [CONTRIBUTING.md](CONTRIBUTING.md), then use [CODE_MAP.md](CODE_MAP.md) to find a file and [ARCHITECTURE.md](ARCHITECTURE.md) to follow the execution flow. [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) explains the action contract and its current limits.
 
-Designed for a separate “mode” rather than a normal pipeline step, but conceptually:
-
-```yaml
-version: 1
-job:
-  name: "dedupe_library"
-
-  for_each:
-    glob: "media/**/*.{jpg,jpeg,png,mp4,mov}"
-
-  output:
-    directory: "output/reports"
-    filename: "dedupe_report.json"
-
-  steps:
-    - action: dedupe_media
-      image_threshold: 5
-      video_frame_sample_rate: 1
-```
-
-The core dedupe module would:
-
-* Hash images (perceptual hash)
-* Sample & hash video frames
-* Group near-duplicates and write a report
-
----
-
-## 🧠 Architecture Overview
-
-### Monorepo layout
-
-```text
-templates/          Example YAML jobs
-packages/core/src/  Core implementation
-packages/core/test/ Core tests
-packages/cli/src/   CLI implementation
-packages/cli/test/  CLI tests
-```
-
-### Current packages
-
-- Core loads and validates YAML, plans matched files, validates the complete plan, and executes registered actions.
-- CLI provides run, dry-run, and validate commands with repeatable --set overrides.
-
-See [CODE_MAP.md](CODE_MAP.md) for every current source file and [ARCHITECTURE.md](ARCHITECTURE.md) for the execution flow and extension contract.
-
----
-
-## 🛣️ Roadmap Ideas
-
-* More built-in **profiles** for `compress_video` (WhatsApp, Telegram, Instagram, etc.)
-* More actions:
-
-  * `generate_thumbnails`
-  * `split_video` (e.g., create 10s clips)
-  * `subtitle_ops` (extract / burn-in)
-* Configurable **concurrency** (number of ffmpeg processes)
-* Rich **JSON output** for integration with other tools
-* Optional **desktop app** (Tauri + React) using the same core
-
----
-
-## 🤝 Contributing
-
-1. Fork + clone the repo
-2. Create a feature branch
-3. Add/update:
-
-   * TypeScript action implementation (in `ffmpeg/actions`)
-   * Zod schema if config shape changes
-   * At least one example YAML in `templates/`
-4. Add tests under `tests/`
-5. Open a PR 🚀
-
----
-
-## ⚠️ Disclaimer
-
-MediaSmith is a helper around **ffmpeg**, which is a powerful but sharp tool.
-Always test your configs on **sample data** before running them on your whole library.
-
-```bash
-mediasmith dry-run path/to/config.yml
-```
-
-Use `dry-run` frequently until you’re confident in your pipelines.
-
-```
-```
+MediaSmith is licensed under [ISC](LICENSE).

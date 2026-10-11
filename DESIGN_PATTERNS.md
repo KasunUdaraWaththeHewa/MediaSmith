@@ -9,8 +9,8 @@ flowchart LR
   YAML[YAML + CLI overrides] --> Schema[Validate config]
   Schema --> Planner[Expand inputs into tasks]
   Planner --> Checks[Validate complete plan]
-  Checks --> Runner[Run tasks in order]
-  Runner --> Action[Prepare each action step]
+  Checks --> Action[Prepare each action step]
+  Action --> Runner[Run prepared tasks in order]
   Action --> Ffmpeg[Build arguments and run ffmpeg]
   Action --> Preview[Estimate metadata in dry-run]
 ```
@@ -28,9 +28,9 @@ To add an action, create one module under `ffmpeg/actions/`, call `defineAction`
 `defineAction` provides two entry points:
 
 - `tryPrepare(step)` returns either validation issues or a prepared step. The YAML schema uses it to report field errors.
-- `prepare(step)` returns a prepared step or throws. The task runner calls it once per step in an execution. The prepared step closes over the typed options returned by Zod, so command building, output checks, and dry-run estimation use those options without reparsing them.
+- `prepare(step)` returns a prepared step or throws. Plan validation calls it once per task step. The prepared plan carries those steps to the task runner. Each prepared step closes over typed options returned by Zod, so command building, output checks, and dry-run estimation use those options without reparsing them.
 
-YAML validation and task execution are separate phases, so each phase validates its own input. Callers should pass the prepared step through an execution instead of calling `prepare` for each method.
+YAML validation and plan preparation are separate phases, so the plan checks its inputs independently. Callers pass prepared steps through execution instead of calling `prepare` for each method.
 
 ## Functional core and process shell
 
@@ -50,12 +50,12 @@ Dry-run cannot probe a temporary file that was never rendered. It probes the ori
 
 `packages/core/src/errors.ts` defines `MediaSmithError`. Its `code`, `context`, and `cause` support programmatic handling; its message remains useful in the CLI.
 
-| Code | Owner | Useful context |
-| --- | --- | --- |
-| `CONFIG` | YAML loader and schema | Config path and first invalid field path |
-| `PLAN` | Job planning and plan checks | Job name |
-| `TASK` | Task runner | Task ID, step index, and action |
-| `PROCESS` | ffmpeg and ffprobe wrappers | Command and exit code |
+| Code      | Owner                        | Useful context                           |
+| --------- | ---------------------------- | ---------------------------------------- |
+| `CONFIG`  | YAML loader and schema       | Config path and first invalid field path |
+| `PLAN`    | Job planning and plan checks | Job name                                 |
+| `TASK`    | Task runner                  | Task ID, step index, and action          |
+| `PROCESS` | ffmpeg and ffprobe wrappers  | Command and exit code                    |
 
 Wrap an error at the boundary where more context becomes known. Preserve the original error as `cause`, and avoid hiding field paths or ffmpeg output that help diagnose the failure.
 
@@ -63,13 +63,19 @@ Wrap an error at the boundary where more context becomes known. Preserve the ori
 
 Add these only when the corresponding capability is being built:
 
-| Need | Pattern | First change |
-| --- | --- | --- |
-| Alternate ffmpeg execution, retries, or deterministic process tests | Port and adapter | Define a small executor interface used by the runner; keep the current child-process implementation as its adapter. |
-| Resume, retry, or concurrent tasks | Explicit task state machine | Define task states and transitions before adding a manifest or worker pool. |
-| Thumbnails, splitting, or other multiple-output actions | Artifact model | Extend planned tasks and action results to describe each output before adding those actions. |
+| Need                                                                | Pattern                     | First change                                                                                                        |
+| ------------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Alternate ffmpeg execution, retries, or deterministic process tests | Port and adapter            | Define a small executor interface used by the runner; keep the current child-process implementation as its adapter. |
+| Resume, retry, or concurrent tasks                                  | Explicit task state machine | Define task states and transitions before adding a manifest or worker pool.                                         |
+| Thumbnails, splitting, or other multiple-output actions             | Artifact model              | Extend planned tasks and action results to describe each output before adding those actions.                        |
 
 The current registry and single-output task model cover the implemented actions. Keep new interfaces as small as the feature that needs them.
+
+### Proposed artifact model for multiple outputs
+
+Before adding the first action that creates several files, extend the plan with explicit output artifacts. Each artifact should have a destination path, media kind (video, audio, image, subtitle, or report), and a role: `primary` for the file passed to the next step, or `side` for an additional result. A step such as thumbnail generation may produce only side artifacts; the planner must then say whether the original input continues to the next step.
+
+The planner should reserve every destination path and reject collisions with inputs or other artifacts before execution. The runner should render outputs to temporary paths, verify the declared artifacts, publish them only after the step succeeds, and clean all temporary files on failure. Dry-run and future JSON reports should show the same artifact list. Existing version 1 jobs would still have one primary artifact, preserving their output mapping. Add a new YAML version only if the meaning of existing `output` or pipeline fields must change.
 
 ## Action contribution checklist
 
@@ -79,4 +85,4 @@ The current registry and single-output task model cover the implemented actions.
 4. Add tests for valid and invalid YAML, argument construction, dry-run metadata, and rendered media where behavior depends on ffmpeg.
 5. Add a template, update the configuration and code map docs, and run `npm test`.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the current flow and limits, and [contribute.md](contribute.md) for setup and compatibility rules.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the current flow and limits, and [CONTRIBUTING.md](CONTRIBUTING.md) for setup and compatibility rules.
