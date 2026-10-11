@@ -28,8 +28,10 @@ function pairingKey(file: string, pairing: Pairing, kind: 'video' | 'audio'): st
 function makeTask(inputFiles: string[], basename: string, job: Job): Task {
   const extension = path.extname(inputFiles[0]).slice(1);
   const filename = job.output.filename
-    .split('{basename}').join(basename)
-    .split('{ext}').join(extension);
+    .split('{basename}')
+    .join(basename)
+    .split('{ext}')
+    .join(extension);
 
   return {
     id: crypto.randomBytes(8).toString('hex'),
@@ -44,7 +46,7 @@ function makeTask(inputFiles: string[], basename: string, job: Job): Task {
 async function planSingleFiles(job: Job, pattern: string): Promise<Task[]> {
   const files = (await fg(pattern, { dot: false })).sort();
   if (files.length === 0) throw new Error(`No input files match ${pattern}`);
-  return files.map(file => makeTask([file], basenameOf(file), job));
+  return files.map((file) => makeTask([file], basenameOf(file), job));
 }
 
 async function planPairedFiles(job: Job, pairing: Pairing): Promise<Task[]> {
@@ -80,11 +82,11 @@ async function planPairedFiles(job: Job, pairing: Pairing): Promise<Task[]> {
     tasks.push(makeTask([video, audio], key, job));
   }
 
-  const unmatchedAudio = audioFiles.filter(audio => !matchedAudio.has(audio));
+  const unmatchedAudio = audioFiles.filter((audio) => !matchedAudio.has(audio));
   if (unmatchedVideos.length || unmatchedAudio.length) {
     throw new Error(
       `Unmatched media pairs: ${unmatchedVideos.length} video(s), ${unmatchedAudio.length} audio file(s). ` +
-      `Videos: ${unmatchedVideos.join(', ') || 'none'}; audio: ${unmatchedAudio.join(', ') || 'none'}`
+        `Videos: ${unmatchedVideos.join(', ') || 'none'}; audio: ${unmatchedAudio.join(', ') || 'none'}`
     );
   }
   return tasks;

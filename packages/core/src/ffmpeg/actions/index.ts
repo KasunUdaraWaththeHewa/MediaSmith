@@ -1,4 +1,4 @@
-import { ActionDefinition, StepContext } from './action';
+import type { ActionDefinition, PreparedActionStep, StepContext } from './action';
 import { compressVideoAction } from './compressVideo';
 import { mergeAudioAction } from './mergeAudio';
 import { extractAudioAction } from './extractAudio';
@@ -14,8 +14,12 @@ export function getActionDefinition(action: string): ActionDefinition | undefine
   return Object.prototype.hasOwnProperty.call(actions, action) ? actions[action] : undefined;
 }
 
-export function buildArgsForStep(step: { action: string }, context: StepContext): string[] {
+export function prepareActionStep(step: { action: string }): PreparedActionStep {
   const definition = getActionDefinition(step.action);
   if (!definition) throw new Error(`Unknown or unimplemented action: ${step.action}`);
-  return definition.buildArgs(step, context);
+  return definition.prepare(step);
+}
+
+export function buildArgsForStep(step: { action: string }, context: StepContext): string[] {
+  return prepareActionStep(step).buildArgs(context);
 }

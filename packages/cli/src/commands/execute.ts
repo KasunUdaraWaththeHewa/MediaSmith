@@ -10,7 +10,7 @@ export async function executeJob(
     const config = await loadJobConfig(configPath, options.set);
     await runJobFromConfig(config, {
       dryRun,
-      onLog: message => console.log(message)
+      onLog: (message) => console.log(message)
     });
   } catch (error) {
     console.error('Error:', error instanceof Error ? error.message : String(error));

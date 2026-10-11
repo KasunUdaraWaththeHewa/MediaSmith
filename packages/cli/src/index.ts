@@ -30,7 +30,7 @@ program
   .option('--set <path=value>', 'Override a job field (repeatable)', collectSet, [])
   .action(validateCommand);
 
-program.parseAsync(process.argv).catch(error => {
+program.parseAsync(process.argv).catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });

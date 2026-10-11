@@ -14,17 +14,29 @@ export interface ActionValidationIssue {
   message: string;
 }
 
-export interface ActionDefinition {
-  schema: z.ZodTypeAny;
+export interface PreparedActionStep {
   inputKind: 'video' | 'audio';
   outputKind: 'video' | 'audio';
   needsProbe: boolean;
   needsExternalAudio: boolean;
-  outputExtensions(step: unknown): readonly string[];
-  defaultExtension(step: unknown): string;
-  buildArgs(step: unknown, context: StepContext): string[];
-  validateJobStep?(step: unknown, settings?: JobSettings): ActionValidationIssue | undefined;
-  validateOutput?(step: unknown, outputFile: string): Promise<void>;
+  outputExtensions: readonly string[];
+  defaultExtension: string;
+  buildArgs(context: StepContext): string[];
+  validateJobStep(settings?: JobSettings): ActionValidationIssue | undefined;
+  validateOutput(outputFile: string): Promise<void>;
+  estimateProbe(probe: VideoProbeInfo, settings?: JobSettings): VideoProbeInfo | undefined;
+}
+
+export type PreparedActionResult =
+  { success: true; data: PreparedActionStep } | { success: false; issues: z.ZodIssue[] };
+
+export interface ActionDefinition {
+  inputKind: 'video' | 'audio';
+  outputKind: 'video' | 'audio';
+  needsProbe: boolean;
+  needsExternalAudio: boolean;
+  prepare(step: unknown): PreparedActionStep;
+  tryPrepare(step: unknown): PreparedActionResult;
 }
 
 interface ActionOptions<S extends z.ZodTypeAny> {
@@ -36,6 +48,11 @@ interface ActionOptions<S extends z.ZodTypeAny> {
   needsExternalAudio?: boolean;
   validateJobStep?: (step: z.infer<S>, settings?: JobSettings) => ActionValidationIssue | undefined;
   validateOutput?: (step: z.infer<S>, outputFile: string) => Promise<void>;
+  estimateProbe?: (
+    step: z.infer<S>,
+    probe: VideoProbeInfo,
+    settings?: JobSettings
+  ) => VideoProbeInfo | undefined;
 }
 
 export function defineAction<S extends z.ZodTypeAny>(
@@ -45,20 +62,32 @@ export function defineAction<S extends z.ZodTypeAny>(
 ): ActionDefinition {
   const validateJobStep = options.validateJobStep;
   const validateOutput = options.validateOutput;
+  function prepared(parsed: z.infer<S>): PreparedActionStep {
+    return {
+      inputKind: options.inputKind,
+      outputKind: options.outputKind,
+      needsProbe: options.needsProbe ?? false,
+      needsExternalAudio: options.needsExternalAudio ?? false,
+      outputExtensions: options.outputExtensions(parsed),
+      defaultExtension: options.defaultExtension(parsed),
+      buildArgs: (context) => buildArgs(parsed, context),
+      validateJobStep: (settings) => validateJobStep?.(parsed, settings),
+      validateOutput: (outputFile) => validateOutput?.(parsed, outputFile) ?? Promise.resolve(),
+      estimateProbe: (probe, settings) => options.estimateProbe?.(parsed, probe, settings)
+    };
+  }
+
   return {
-    schema,
     inputKind: options.inputKind,
     outputKind: options.outputKind,
     needsProbe: options.needsProbe ?? false,
     needsExternalAudio: options.needsExternalAudio ?? false,
-    outputExtensions: step => options.outputExtensions(schema.parse(step)),
-    defaultExtension: step => options.defaultExtension(schema.parse(step)),
-    buildArgs: (step, context) => buildArgs(schema.parse(step), context),
-    validateJobStep: validateJobStep
-      ? (step, settings) => validateJobStep(schema.parse(step), settings)
-      : undefined,
-    validateOutput: validateOutput
-      ? (step, outputFile) => validateOutput(schema.parse(step), outputFile)
-      : undefined
+    prepare: (step) => prepared(schema.parse(step)),
+    tryPrepare(step): PreparedActionResult {
+      const result = schema.safeParse(step);
+      return result.success
+        ? { success: true, data: prepared(result.data) }
+        : { success: false, issues: result.error.issues };
+    }
   };
 }

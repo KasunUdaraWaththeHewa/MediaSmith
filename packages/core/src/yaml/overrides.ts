@@ -46,7 +46,8 @@ function setChild(container: unknown, key: string, value: unknown): void {
 
 export function applyOverrides(config: unknown, overrides: string[]): unknown {
   if (overrides.length === 0) return config;
-  if (!isObject(config) || !isObject(config.job)) throw new Error('Overrides require a YAML job object');
+  if (!isObject(config) || !isObject(config.job))
+    throw new Error('Overrides require a YAML job object');
 
   for (const assignment of overrides) {
     const equals = assignment.indexOf('=');
@@ -54,8 +55,13 @@ export function applyOverrides(config: unknown, overrides: string[]): unknown {
     const rawPath = assignment.slice(0, equals);
     const fieldPath = rawPath.startsWith('job.') ? rawPath.slice(4) : rawPath;
     const parts = fieldPath.split('.');
-    if (parts.some(part => !/^(?:[A-Za-z_][A-Za-z0-9_-]*|\d+)$/.test(part)
-      || ['__proto__', 'constructor', 'prototype'].includes(part))) {
+    if (
+      parts.some(
+        (part) =>
+          !/^(?:[A-Za-z_][A-Za-z0-9_-]*|\d+)$/.test(part) ||
+          ['__proto__', 'constructor', 'prototype'].includes(part)
+      )
+    ) {
       throw new Error(`Invalid override path: ${rawPath}`);
     }
 

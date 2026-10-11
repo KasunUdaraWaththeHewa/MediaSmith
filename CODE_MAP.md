@@ -7,6 +7,7 @@ This map covers the hand-written source under `packages/core/src` and `packages/
 | File | Responsibility |
 | --- | --- |
 | `index.ts` | Public core exports |
+| `errors.ts` | Structured config, plan, task, and process errors |
 | `domain/Job.ts` | Planned job and task shapes |
 | `domain/JobConfig.ts` | Public aliases derived from the validated YAML shape |
 | `domain/Step.ts` | Step type derived from the runtime schema |
@@ -24,7 +25,9 @@ This map covers the hand-written source under `packages/core/src` and `packages/
 | `ffmpeg/actions/index.ts` | Register actions and resolve their command builders |
 | `ffmpeg/actions/defaults.ts` | Built-in action defaults |
 | `ffmpeg/actions/formats.ts` | Shared output extension lists |
-| `ffmpeg/actions/compressVideo.ts` | Compression options, settings, ffmpeg arguments, and output checks |
+| `ffmpeg/actions/compressVideo.ts` | Compression schema, ffmpeg arguments, output checks, and preview metadata |
+| `ffmpeg/actions/compressionSettings.ts` | Resolve compression profile and quality settings |
+| `ffmpeg/actions/compressionMath.ts` | Pure dimension and bitrate calculations |
 | `ffmpeg/actions/mergeAudio.ts` | Audio merge options and ffmpeg arguments |
 | `ffmpeg/actions/extractAudio.ts` | Audio extraction options and ffmpeg arguments |
 
@@ -39,4 +42,4 @@ This map covers the hand-written source under `packages/core/src` and `packages/
 | `commands/dryRun.ts` | Select dry-run execution |
 | `commands/validate.ts` | Validate a YAML config and set the exit status |
 
-When adding an action, put its options and media rules in its action module. Keep file discovery in the planner, whole-plan checks in the plan validator, and process handling in the ffmpeg modules. See [ARCHITECTURE.md](ARCHITECTURE.md) for the execution flow.
+When adding an action, put its options and media rules in its action module. Keep file discovery in the planner, whole-plan checks in the plan validator, and process handling in the ffmpeg modules. See [ARCHITECTURE.md](ARCHITECTURE.md) for the execution flow and [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) for extension contracts.

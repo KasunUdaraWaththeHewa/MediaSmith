@@ -1,7 +1,10 @@
 import { loadJobConfig } from '@mediasmith/core';
 import type { ConfigOptions } from './options';
 
-export async function validateCommand(configPath: string, options: ConfigOptions = {}): Promise<void> {
+export async function validateCommand(
+  configPath: string,
+  options: ConfigOptions = {}
+): Promise<void> {
   try {
     await loadJobConfig(configPath, options.set);
     console.log('Config is valid');

@@ -8,7 +8,7 @@ MediaSmith is a CLI tool that lets you describe media operations in **simple YAM
 - Turn high-level **“actions”** into the correct ffmpeg commands
 - Run them in bulk with sensible defaults
 
-> **Current implementation:** `run`, `dry-run`, and `validate` support `compress_video`, `merge_audio`, and `extract_audio`. Other actions described below are planned and fail validation until implemented. `validate` checks YAML structure and options; `dry-run` also checks matched inputs and output paths. See [ARCHITECTURE.md](ARCHITECTURE.md) and [feature-plan.md](feature-plan.md).
+> **Current implementation:** `run`, `dry-run`, and `validate` support `compress_video`, `merge_audio`, and `extract_audio`. Other actions described below are planned and fail validation until implemented. `validate` checks YAML structure and options; `dry-run` also checks matched inputs and output paths. See [CODE_MAP.md](CODE_MAP.md) for the current files, [ARCHITECTURE.md](ARCHITECTURE.md) for the execution flow, [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) for extension guidance, and [feature-plan.md](feature-plan.md) for planned features.
 
 Shared settings can be grouped in YAML and overridden with `--set` on every CLI command. See [CONFIGURATION.md](CONFIGURATION.md) and [templates/custom_profile.yml](templates/custom_profile.yml) for examples and precedence.
 
@@ -388,74 +388,19 @@ The core dedupe module would:
 ### Monorepo layout
 
 ```text
-mediasmith/
-├─ templates/         # example YAML configs
-├─ packages/
-│  ├─ core/          # @mediasmith/core – engine
-│  └─ cli/           # @mediasmith/cli – command-line interface
-└─ tests/
+templates/          Example YAML jobs
+packages/core/src/  Core implementation
+packages/core/test/ Core tests
+packages/cli/src/   CLI implementation
+packages/cli/test/  CLI tests
 ```
 
-### `@mediasmith/core` (engine)
+### Current packages
 
-* **yaml/**
+- Core loads and validates YAML, plans matched files, validates the complete plan, and executes registered actions.
+- CLI provides run, dry-run, and validate commands with repeatable --set overrides.
 
-  * `loader.ts` – read & parse YAML
-  * `schema.ts` – Zod schema for validation
-
-* **domain/**
-
-  * `JobConfig.ts` – TypeScript model of the config (version, job, steps…)
-  * `Step.ts` – `action` union (`compress_video`, `merge_audio`, etc.)
-  * `Job.ts` – runtime job & task structures
-  * `Media.ts` – media metadata
-
-* **planner/**
-
-  * `batchPlanner.ts` – expands `for_each.glob`
-  * `pairPlanner.ts` – handles `for_each_pairs`
-  * `pipelinePlanner.ts` – builds per-file task list
-
-* **ffmpeg/**
-
-  * `ffprobe.ts` – probe media info
-  * `executor.ts` – spawn ffmpeg, handle progress
-  * `actions/` – per-action mapping to ffmpeg:
-
-    * `compressVideo.ts`
-    * `mergeAudio.ts`
-    * `extractAudio.ts`
-    * `trim.ts`
-    * `normalizeAudio.ts`
-    * …
-
-* **engine/**
-
-  * `jobRunner.ts` – orchestrates:
-
-    * load YAML → validate → plan → execute tasks
-  * `progress.ts` – types/events for progress reporting
-
-* **dedupe/**
-
-  * `imageHash.ts`, `videoHash.ts`, `dedupeService.ts` (optional)
-
-### `@mediasmith/cli` (CLI)
-
-* Uses `commander` (or similar) to expose commands:
-
-```bash
-mediasmith run <config.yml>       # execute job
-mediasmith dry-run <config.yml>   # print planned tasks / ffmpeg cmds
-mediasmith validate <config.yml>  # validate YAML
-mediasmith list-templates         # list built-in configs
-```
-
-Each command:
-
-1. Loads config via `@mediasmith/core`
-2. Optionally validates / dry-runs
-3. Calls `runJobFromConfig` and logs progress
+See [CODE_MAP.md](CODE_MAP.md) for every current source file and [ARCHITECTURE.md](ARCHITECTURE.md) for the execution flow and extension contract.
 
 ---
 

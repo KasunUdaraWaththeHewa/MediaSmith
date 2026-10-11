@@ -10,8 +10,8 @@ The README and existing roadmap describe additional actions. Validation now reje
 | --- | --- |
 | Action-specific validation | Implemented for registered actions and their known options. Unsupported actions fail validation. Add checks for incompatible option combinations as actions grow. |
 | Real step pipelines | Implemented with temporary files and cleanup. A real ffmpeg integration test verifies `merge_audio` followed by `compress_video` retains audible external audio. |
-| Safe dry-run and output policy | Dry-run is read-only; empty globs, unmatched/ambiguous pairs, duplicate output paths, and input/output overlap are rejected. Still add an explicit skip, error, or overwrite policy for existing outputs. |
-| Useful failures and tests | Spawn failures and task context are handled; validation, normalized pairing, collision, pipeline, and failed ffmpeg cleanup tests exist. Expand coverage as new actions are added. |
+| Safe dry-run and output policy | Dry-run is read-only and now carries estimated metadata through supported pipelines; empty globs, unmatched/ambiguous pairs, duplicate output paths, and input/output overlap are rejected. Still add an explicit skip, error, or overwrite policy for existing outputs. |
+| Useful failures and tests | Config, plan, task, and process failures have structured context. Formatting, lint, build, validation, pairing, pipeline, and failed ffmpeg cleanup tests run through `npm test`. Expand coverage as new actions are added. |
 
 **Release gate:** Every supplied template either runs as documented or fails validation with a clear reason. Dry-run leaves the filesystem unchanged.
 

@@ -2,13 +2,19 @@
   "name": "mediasmith",
   "version": "1.0.0",
   "description": "YAML-driven ffmpeg CLI for batch media processing",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
   "workspaces": [
     "packages/core",
     "packages/cli"
   ],
   "scripts": {
     "build": "npm run build -w @mediasmith/core && npm run build -w @mediasmith/cli",
-    "test": "npm run build && node --test packages/core/test/*.test.js packages/cli/test/*.test.js"
+    "format": "prettier --write \"packages/{core,cli}/{src,test}/**/*.{ts,js}\" eslint.config.mjs",
+    "format:check": "prettier --check \"packages/{core,cli}/{src,test}/**/*.{ts,js}\" eslint.config.mjs",
+    "lint": "eslint packages/core/src packages/cli/src packages/core/test packages/cli/test",
+    "test": "npm run format:check && npm run lint && npm run build && node --test packages/core/test/*.test.js packages/cli/test/*.test.js"
   },
   "repository": {
     "type": "git",
@@ -23,6 +29,10 @@
   },
   "homepage": "https://github.com/KasunUdaraWaththeHewa/MediaSmith#readme",
   "devDependencies": {
-    "@types/node": "^25.0.0"
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.0.0",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.10",
+    "typescript-eslint": "^8.71.1"
   }
 }
