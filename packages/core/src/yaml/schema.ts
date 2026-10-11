@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import path from 'path';
 import { getActionDefinition } from '../ffmpeg/actions';
-import { DEFAULT_SETTINGS } from '../ffmpeg/actions/defaults';
 import { JobSettingsSchema } from './settings';
 
 function validateStep(step: { action: string }, context: z.RefinementCtx): void {
@@ -98,20 +97,16 @@ function validateSelection(job: JobFields, context: z.RefinementCtx): void {
   }
 }
 
-function validateProfiles(job: JobFields, context: z.RefinementCtx): void {
-  const profiles = job.settings?.compress_video?.profiles ?? {};
+function validateActionSettings(job: JobFields, context: z.RefinementCtx): void {
   for (const [index, step] of job.steps.entries()) {
-    if (step.action !== 'compress_video' || typeof step.profile !== 'string') continue;
-
-    const isBuiltin = Object.prototype.hasOwnProperty.call(
-      DEFAULT_SETTINGS.compress_video.profiles, step.profile
-    );
-    const isConfigured = Object.prototype.hasOwnProperty.call(profiles, step.profile);
-    if (!isBuiltin && !isConfigured) {
+    const action = getActionDefinition(step.action);
+    if (!action || !action.validateJobStep || !action.schema.safeParse(step).success) continue;
+    const issue = action.validateJobStep(step, job.settings);
+    if (issue) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['steps', index, 'profile'],
-        message: `Unknown compression profile: ${step.profile}`
+        path: ['steps', index, ...issue.path],
+        message: issue.message
       });
     }
   }
@@ -137,7 +132,7 @@ function validateOutputExtension(job: JobFields, context: z.RefinementCtx): void
 
 const JobBodySchema = JobFieldsSchema.superRefine((job, context) => {
   validateSelection(job, context);
-  validateProfiles(job, context);
+  validateActionSettings(job, context);
   validateOutputExtension(job, context);
 });
 

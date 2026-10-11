@@ -1,6 +1,8 @@
+import fs from 'fs';
 import type { VideoProbeInfo } from '../ffprobe';
 import { z } from 'zod';
 import { defineAction } from './action';
+import type { ActionValidationIssue } from './action';
 import { VIDEO_EXTENSIONS } from './formats';
 import { DEFAULT_SETTINGS } from './defaults';
 import { PositiveInteger, PresetSchema } from '../../yaml/settings';
@@ -29,20 +31,28 @@ function qualityToCrf(q: Quality | undefined): number {
 }
 
 type CompressionSettings = NonNullable<JobSettings['compress_video']>;
+type VideoProfile = { max_width?: number; video_bitrate_kbps?: number };
+
+function getProfile(profiles: Record<string, VideoProfile> | undefined, name: string | undefined): VideoProfile | undefined {
+  return name && profiles && Object.prototype.hasOwnProperty.call(profiles, name)
+    ? profiles[name]
+    : undefined;
+}
+
+function validateCompressionProfile(step: CompressVideoStep, settings?: JobSettings): ActionValidationIssue | undefined {
+  if (!step.profile) return undefined;
+  const builtin = getProfile(DEFAULT_SETTINGS.compress_video.profiles, step.profile);
+  const configured = getProfile(settings?.compress_video?.profiles, step.profile);
+  return builtin || configured
+    ? undefined
+    : { path: ['profile'], message: `Unknown compression profile: ${step.profile}` };
+}
 
 function resolveCompressionSettings(step: CompressVideoStep, settings: CompressionSettings) {
-  const builtinProfiles: Record<string, { max_width?: number; video_bitrate_kbps?: number }> =
-    DEFAULT_SETTINGS.compress_video.profiles;
-  const builtinProfile = step.profile && Object.prototype.hasOwnProperty.call(builtinProfiles, step.profile)
-    ? builtinProfiles[step.profile]
-    : undefined;
-  const configuredProfile = step.profile && settings.profiles
-    && Object.prototype.hasOwnProperty.call(settings.profiles, step.profile)
-    ? settings.profiles[step.profile]
-    : undefined;
-  if (step.profile && !builtinProfile && !configuredProfile) {
-    throw new Error(`Unknown compression profile: ${step.profile}`);
-  }
+  const builtinProfile = getProfile(DEFAULT_SETTINGS.compress_video.profiles, step.profile);
+  const configuredProfile = getProfile(settings.profiles, step.profile);
+  const profileError = validateCompressionProfile(step, { compress_video: settings });
+  if (profileError) throw new Error(profileError.message);
 
   return {
     maxWidth: step.max_width ?? configuredProfile?.max_width ?? builtinProfile?.max_width,
@@ -60,6 +70,19 @@ function resolveCompressionSettings(step: CompressVideoStep, settings: Compressi
     minimumVideoKbps: settings.minimum_video_bitrate_kbps
       ?? DEFAULT_SETTINGS.compress_video.minimum_video_bitrate_kbps
   };
+}
+
+async function validateCompressedOutput(step: CompressVideoStep, outputFile: string): Promise<void> {
+  if (step.max_size_mb === undefined) return;
+
+  const actualBytes = (await fs.promises.stat(outputFile)).size;
+  const limitBytes = step.max_size_mb * 1024 * 1024;
+  if (actualBytes > limitBytes) {
+    throw new Error(
+      `Output is ${(actualBytes / 1024 / 1024).toFixed(2)} MB, above max_size_mb=${step.max_size_mb}. ` +
+      'Try a larger limit or shorter input'
+    );
+  }
 }
 
 export function buildCompressVideoArgs(
@@ -123,6 +146,8 @@ export const compressVideoAction = defineAction(
     outputKind: 'video',
     outputExtensions: () => VIDEO_EXTENSIONS,
     defaultExtension: () => '.mp4',
-    needsProbe: true
+    needsProbe: true,
+    validateJobStep: validateCompressionProfile,
+    validateOutput: validateCompressedOutput
   }
 );

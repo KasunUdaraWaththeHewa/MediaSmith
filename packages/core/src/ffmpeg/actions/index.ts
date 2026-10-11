@@ -11,7 +11,7 @@ const actions: Record<string, ActionDefinition> = {
 };
 
 export function getActionDefinition(action: string): ActionDefinition | undefined {
-  return actions[action];
+  return Object.prototype.hasOwnProperty.call(actions, action) ? actions[action] : undefined;
 }
 
 export function buildArgsForStep(step: { action: string }, context: StepContext): string[] {

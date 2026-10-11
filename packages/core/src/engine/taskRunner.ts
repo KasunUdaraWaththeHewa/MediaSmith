@@ -15,24 +15,6 @@ function temporaryOutputFor(task: Task, stepIndex: number, extension: string): s
   return path.join(path.dirname(task.outputFile), `.${name}.mediasmith-${task.id}-${stepIndex}${extension}`);
 }
 
-async function checkOutputSize(task: Task, outputFile: string): Promise<void> {
-  const limits = task.steps.flatMap(step =>
-    step.action === 'compress_video' && typeof step.max_size_mb === 'number'
-      ? [step.max_size_mb]
-      : []
-  );
-  if (limits.length === 0) return;
-
-  const limitMb = Math.min(...limits);
-  const actualBytes = (await fs.promises.stat(outputFile)).size;
-  if (actualBytes > limitMb * 1024 * 1024) {
-    throw new Error(
-      `Output is ${(actualBytes / 1024 / 1024).toFixed(2)} MB, above max_size_mb=${limitMb}. ` +
-      'Try a larger limit or shorter input'
-    );
-  }
-}
-
 async function removeTemporaryFiles(files: string[], onLog?: RunOptions['onLog']): Promise<void> {
   const cleanup = await Promise.allSettled(files.map(file => fs.promises.rm(file, { force: true })));
   for (const result of cleanup) {
@@ -76,7 +58,10 @@ export async function runTask(task: Task, options: RunOptions): Promise<void> {
     }
 
     if (!options.dryRun) {
-      await checkOutputSize(task, currentInput);
+      for (const step of task.steps) {
+        const action = getActionDefinition(step.action);
+        await action?.validateOutput?.(step, currentInput);
+      }
       await fs.promises.rename(currentInput, task.outputFile);
     }
   } catch (error) {

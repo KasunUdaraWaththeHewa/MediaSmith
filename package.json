@@ -1,8 +1,7 @@
 {
   "name": "mediasmith",
   "version": "1.0.0",
-  "description": "> 🛠️ YAML-driven helper for **ffmpeg** – focused on **batch work**, **audio+video pairing**, and **human-readable configs**.",
-  "main": "index.js",
+  "description": "YAML-driven ffmpeg CLI for batch media processing",
   "workspaces": [
     "packages/core",
     "packages/cli"
@@ -23,11 +22,6 @@
     "url": "https://github.com/KasunUdaraWaththeHewa/MediaSmith/issues"
   },
   "homepage": "https://github.com/KasunUdaraWaththeHewa/MediaSmith#readme",
-  "dependencies": {
-    "fs": "^0.0.1-security",
-    "path": "^0.12.7",
-    "yaml": "^2.8.2"
-  },
   "devDependencies": {
     "@types/node": "^25.0.0"
   }

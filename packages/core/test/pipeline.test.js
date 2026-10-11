@@ -25,6 +25,7 @@ test('schema accepts existing actions and rejects unavailable actions and bad op
   };
   assert.equal(JobSchema.safeParse(base).success, true);
   assert.equal(JobSchema.safeParse({ ...base, job: { ...base.job, steps: [{ action: 'trim' }] } }).success, false);
+  assert.equal(JobSchema.safeParse({ ...base, job: { ...base.job, steps: [{ action: '__proto__' }] } }).success, false);
   assert.equal(JobSchema.safeParse({ ...base, job: { ...base.job, steps: [{ action: 'compress_video', quality: 'extreme' }] } }).success, false);
   assert.equal(JobSchema.safeParse({ ...base, job: { ...base.job, steps: [{ action: 'compress_video', qualty: 'high' }] } }).success, false);
   assert.equal(JobSchema.safeParse({ ...base, version: 2 }).success, false);

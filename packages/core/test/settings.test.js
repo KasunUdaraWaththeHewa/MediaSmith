@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { loadJobConfig } = require('../dist');
-const { buildArgsForStep } = require('../dist/ffmpeg/actions');
+const { buildArgsForStep, getActionDefinition } = require('../dist/ffmpeg/actions');
 const { buildMergeAudioArgs } = require('../dist/ffmpeg/actions/mergeAudio');
 const { buildExtractAudioArgs } = require('../dist/ffmpeg/actions/extractAudio');
 
@@ -92,4 +92,26 @@ test('audio settings feed merge and extraction without changing step syntax', ()
     { mp3_quality_bitrates_kbps: { high: 256 } }
   );
   assert.equal(extract[extract.indexOf('-b:a') + 1], '256k');
+});
+
+test('compression action owns its job and rendered-output checks', async () => {
+  const action = getActionDefinition('compress_video');
+  const profileIssue = action.validateJobStep({ action: 'compress_video', profile: 'missing' });
+  assert.deepEqual(profileIssue, {
+    path: ['profile'],
+    message: 'Unknown compression profile: missing'
+  });
+
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mediasmith-output-check-'));
+  const outputFile = path.join(directory, 'result.mp4');
+  try {
+    fs.writeFileSync(outputFile, Buffer.alloc(2048));
+    await assert.rejects(
+      action.validateOutput({ action: 'compress_video', max_size_mb: 0.001 }, outputFile),
+      /above max_size_mb=0.001/
+    );
+    await action.validateOutput({ action: 'compress_video', max_size_mb: 1 }, outputFile);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });

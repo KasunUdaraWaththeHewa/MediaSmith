@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { VideoProbeInfo } from '../ffprobe';
+import type { VideoProbeInfo } from '../ffprobe';
 import type { JobSettings } from '../../yaml/settings';
 
 export interface StepContext {
@@ -7,6 +7,11 @@ export interface StepContext {
   outputFile: string;
   probe?: VideoProbeInfo;
   settings?: JobSettings;
+}
+
+export interface ActionValidationIssue {
+  path: string[];
+  message: string;
 }
 
 export interface ActionDefinition {
@@ -18,6 +23,8 @@ export interface ActionDefinition {
   outputExtensions(step: unknown): readonly string[];
   defaultExtension(step: unknown): string;
   buildArgs(step: unknown, context: StepContext): string[];
+  validateJobStep?(step: unknown, settings?: JobSettings): ActionValidationIssue | undefined;
+  validateOutput?(step: unknown, outputFile: string): Promise<void>;
 }
 
 interface ActionOptions<S extends z.ZodTypeAny> {
@@ -27,6 +34,8 @@ interface ActionOptions<S extends z.ZodTypeAny> {
   defaultExtension: (step: z.infer<S>) => string;
   needsProbe?: boolean;
   needsExternalAudio?: boolean;
+  validateJobStep?: (step: z.infer<S>, settings?: JobSettings) => ActionValidationIssue | undefined;
+  validateOutput?: (step: z.infer<S>, outputFile: string) => Promise<void>;
 }
 
 export function defineAction<S extends z.ZodTypeAny>(
@@ -34,6 +43,8 @@ export function defineAction<S extends z.ZodTypeAny>(
   buildArgs: (step: z.infer<S>, context: StepContext) => string[],
   options: ActionOptions<S>
 ): ActionDefinition {
+  const validateJobStep = options.validateJobStep;
+  const validateOutput = options.validateOutput;
   return {
     schema,
     inputKind: options.inputKind,
@@ -42,6 +53,12 @@ export function defineAction<S extends z.ZodTypeAny>(
     needsExternalAudio: options.needsExternalAudio ?? false,
     outputExtensions: step => options.outputExtensions(schema.parse(step)),
     defaultExtension: step => options.defaultExtension(schema.parse(step)),
-    buildArgs: (step, context) => buildArgs(schema.parse(step), context)
+    buildArgs: (step, context) => buildArgs(schema.parse(step), context),
+    validateJobStep: validateJobStep
+      ? (step, settings) => validateJobStep(schema.parse(step), settings)
+      : undefined,
+    validateOutput: validateOutput
+      ? (step, outputFile) => validateOutput(schema.parse(step), outputFile)
+      : undefined
   };
 }
