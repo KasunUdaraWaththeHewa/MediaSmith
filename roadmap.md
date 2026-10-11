@@ -1,5 +1,7 @@
 # MediaSmith – Roadmap
 
+For implementation order and release gates, see [feature-plan.md](feature-plan.md).
+
 This document tracks planned features for MediaSmith and how they fit into the
 existing architecture (YAML → engine → ffmpeg).
 

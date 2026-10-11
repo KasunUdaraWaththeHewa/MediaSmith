@@ -1,0 +1,20 @@
+version: 1
+job:
+  name: custom_profile_batch
+  for_each:
+    glob: input/**/*.mp4
+  output:
+    directory: output/custom
+    filename: "{basename}_custom.mp4"
+  settings:
+    compress_video:
+      preset: fast
+      audio_bitrate_kbps: 96
+      profiles:
+        mobile:
+          max_width: 720
+          video_bitrate_kbps: 1200
+  steps:
+    - action: compress_video
+      profile: mobile
+      quality: medium

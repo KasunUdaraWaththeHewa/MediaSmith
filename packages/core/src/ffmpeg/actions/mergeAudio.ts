@@ -1,17 +1,38 @@
+import { z } from 'zod';
+import { defineAction } from './action';
+import { VIDEO_EXTENSIONS } from './formats';
+import { DEFAULT_SETTINGS } from './defaults';
+import { JobSettings, PositiveInteger } from '../../yaml/settings';
+
 export interface MergeAudioStep {
   action: 'merge_audio';
   audio_source: 'external_only' | 'mix';
   original_volume?: number;
   external_volume?: number;
+  audio_bitrate_kbps?: number;
 }
+
+export const MergeAudioSchema = z.object({
+  action: z.literal('merge_audio'),
+  audio_source: z.enum(['external_only', 'mix']),
+  original_volume: z.number().finite().nonnegative().optional(),
+  external_volume: z.number().finite().nonnegative().optional(),
+  audio_bitrate_kbps: PositiveInteger.optional()
+}).strict().superRefine((step, context) => {
+  if (step.audio_source === 'external_only' && (step.original_volume !== undefined || step.external_volume !== undefined)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: 'Volume options require audio_source: mix' });
+  }
+});
 
 export function buildMergeAudioArgs(
   step: MergeAudioStep,
   videoPath: string,
   audioPath: string,
-  outputFile: string
+  outputFile: string,
+  settings: NonNullable<JobSettings['merge_audio']> = {}
 ): string[] {
   const args: string[] = ['-hide_banner', '-y', '-i', videoPath, '-i', audioPath];
+  const audioBitrate = step.audio_bitrate_kbps ?? settings.audio_bitrate_kbps ?? DEFAULT_SETTINGS.merge_audio.audio_bitrate_kbps;
 
   if (step.audio_source === 'external_only') {
     args.push(
@@ -19,14 +40,14 @@ export function buildMergeAudioArgs(
       '-map', '1:a:0',
       '-c:v', 'copy',
       '-c:a', 'aac',
-      '-b:a', '192k',
+      '-b:a', `${audioBitrate}k`,
       outputFile
     );
     return args;
   }
 
-  const origVol = step.original_volume ?? 0.3;
-  const extVol = step.external_volume ?? 1.0;
+  const origVol = step.original_volume ?? settings.original_volume ?? DEFAULT_SETTINGS.merge_audio.original_volume;
+  const extVol = step.external_volume ?? settings.external_volume ?? DEFAULT_SETTINGS.merge_audio.external_volume;
 
   args.push(
     '-filter_complex',
@@ -35,9 +56,26 @@ export function buildMergeAudioArgs(
     '-map', '[aout]',
     '-c:v', 'copy',
     '-c:a', 'aac',
-    '-b:a', '192k',
+    '-b:a', `${audioBitrate}k`,
     outputFile
   );
 
   return args;
 }
+
+export const mergeAudioAction = defineAction(
+  MergeAudioSchema,
+  (step, context) => {
+    if (!context.inputFiles[0] || !context.inputFiles[1]) {
+      throw new Error('merge_audio requires a video and external audio input');
+    }
+    return buildMergeAudioArgs(step, context.inputFiles[0], context.inputFiles[1], context.outputFile, context.settings?.merge_audio);
+  },
+  {
+    inputKind: 'video',
+    outputKind: 'video',
+    outputExtensions: () => VIDEO_EXTENSIONS,
+    defaultExtension: () => '.mp4',
+    needsExternalAudio: true
+  }
+);

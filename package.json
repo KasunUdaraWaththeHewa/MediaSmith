@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "npm run build -w @mediasmith/core && npm run build -w @mediasmith/cli",
-    "test": "npm test -w @mediasmith/core"
+    "test": "npm run build && node --test packages/core/test/*.test.js packages/cli/test/*.test.js"
   },
   "repository": {
     "type": "git",

@@ -4,19 +4,20 @@ export interface VideoProbeInfo {
   duration: number; // seconds
   width: number;
   height: number;
+  hasAudio?: boolean;
 }
 
 export function ffprobeVideo(file: string): Promise<VideoProbeInfo> {
   return new Promise((resolve, reject) => {
     const args = [
       '-v', 'error',
-      '-select_streams', 'v:0',
-      '-show_entries', 'stream=width,height:format=duration',
-      '-of', 'default=noprint_wrappers=1:nokey=0',
+      '-show_entries', 'stream=codec_type,width,height:format=duration',
+      '-of', 'json',
       file
     ];
 
     const child = spawn('ffprobe', args);
+    child.on('error', reject);
     let out = '';
     let err = '';
 
@@ -26,15 +27,22 @@ export function ffprobeVideo(file: string): Promise<VideoProbeInfo> {
     child.on('close', (code) => {
       if (code !== 0) return reject(new Error(err || `ffprobe exited with ${code}`));
 
-      const lines = out.trim().split('\n');
-      let width = 0, height = 0, duration = 0;
-      for (const line of lines) {
-        const [k, v] = line.split('=');
-        if (k === 'width') width = Number(v);
-        if (k === 'height') height = Number(v);
-        if (k === 'duration') duration = Number(v);
+      try {
+        const result = JSON.parse(out) as {
+          streams?: Array<{ codec_type?: string; width?: number; height?: number }>;
+          format?: { duration?: string };
+        };
+        const streams = result.streams ?? [];
+        const video = streams.find(stream => stream.codec_type === 'video');
+        resolve({
+          width: video?.width ?? 0,
+          height: video?.height ?? 0,
+          duration: Number(result.format?.duration ?? 0),
+          hasAudio: streams.some(stream => stream.codec_type === 'audio')
+        });
+      } catch (error) {
+        reject(new Error(`Could not parse ffprobe output for ${file}: ${error instanceof Error ? error.message : String(error)}`));
       }
-      resolve({ width, height, duration });
     });
   });
 }

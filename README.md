@@ -8,6 +8,12 @@ MediaSmith is a CLI tool that lets you describe media operations in **simple YAM
 - Turn high-level **“actions”** into the correct ffmpeg commands
 - Run them in bulk with sensible defaults
 
+> **Current implementation:** `run`, `dry-run`, and `validate` support `compress_video`, `merge_audio`, and `extract_audio`. Other actions described below are planned and fail validation until implemented. `validate` checks YAML structure and options; `dry-run` also checks matched inputs and output paths. See [ARCHITECTURE.md](ARCHITECTURE.md) and [feature-plan.md](feature-plan.md).
+
+Shared settings can be grouped in YAML and overridden with `--set` on every CLI command. See [CONFIGURATION.md](CONFIGURATION.md) and [templates/custom_profile.yml](templates/custom_profile.yml) for examples and precedence.
+
+Current video outputs use `.mp4`, `.m4v`, `.mov`, or `.mkv`. `extract_audio` outputs `.mp3`, `.wav`, or `.flac`, matching its `format`. Output filenames support `{basename}` and `{ext}`. Misspelled fields, unsupported placeholders, empty file matches, and unmatched media pairs fail with an error. `max_size_mb` reserves bitrate for audio and checks the final file size; if the target cannot be met, the job fails instead of reporting an oversized file as successful.
+
 You write **what you want**, not every ffmpeg flag.
 
 ---

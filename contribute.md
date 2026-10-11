@@ -1,345 +1,62 @@
 # Contributing to MediaSmith
 
-Thanks for your interest in contributing to MediaSmith 🎧📹  
-This document explains how the project is structured, how to set up your dev environment, and the rules for adding new features **without breaking existing configs**.
+MediaSmith is a TypeScript CLI that turns YAML jobs into ffmpeg commands. Keep changes small, readable, and compatible with existing version 1 jobs.
 
----
+## Set up
 
-## 1. Project Structure
-
-MediaSmith is a small monorepo:
-
-```text
-mediasmith/
-├─ templates/               # Example YAML configs
-├─ packages/
-│  ├─ core/                 # @mediasmith/core – main engine (YAML → tasks → ffmpeg)
-│  └─ cli/                  # @mediasmith/cli – CLI wrapper around the engine
-└─ tests/                   # Tests and sample configs
-````
-
-### 1.1. `@mediasmith/core`
-
-Contains:
-
-* `domain/` – TypeScript models: `JobConfig`, `Task`, `Step`, etc.
-* `yaml/` – Zod schemas + loader for YAML configs.
-* `planner/` – Expands config into `Task[]` (globs, pairing).
-* `ffmpeg/` – ffprobe, ffmpeg arg builders, executor.
-* `engine/` – Orchestrates planning + execution.
-* `dedupe/` – (future) perceptual hashing & duplicate detection.
-
-### 1.2. `@mediasmith/cli`
-
-Contains:
-
-* CLI entrypoint (`src/index.ts`) using `commander`.
-* Commands:
-
-  * `run <config.yml>`
-  * `dry-run <config.yml>`
-  * `validate <config.yml>`
-
----
-
-## 2. Dev Setup
-
-1. Clone the repo:
-
-   ```bash
-   git clone <repo-url>
-   cd mediasmith
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Build all packages:
-
-   ```bash
-   npm run build
-   ```
-
-4. Link the CLI globally:
-
-   ```bash
-   cd packages/cli
-   npm link
-   ```
-
-5. Make sure `ffmpeg` (and optionally `ffprobe`) are available:
-
-   ```bash
-   ffmpeg -version
-   ffprobe -version
-   ```
-
-If `ffmpeg` is not found, install it and add it to your `PATH` before running MediaSmith.
-
----
-
-## 3. Backward Compatibility Rules (Very Important)
-
-MediaSmith treats **YAML configs** and the **CLI** as a public API.
-
-To avoid breaking existing users:
-
-1. **Do NOT rename existing actions or fields.**
-
-   * `action: merge_audio` must stay `merge_audio`.
-   * Fields like `audio_source`, `profile`, `for_each`, `output.directory`, etc. must keep their names.
-
-2. **Do NOT change the meaning of existing values.**
-
-   * `profile: whatsapp` should keep the same “feel” over time (same general resolution / compression goals).
-
-3. You MAY safely:
-
-   * Add **new actions** (`steps[].action` values), e.g. `extract_audio`, `trim`, `normalize_audio`.
-   * Add **new optional fields** to existing actions with safe defaults.
-   * Add **new CLI commands** or **new optional flags** to commands.
-
-4. If you truly must break behavior:
-
-   * Use `version` in YAML:
-
-     * `version: 1` → old behavior.
-     * `version: 2` → new behavior for configs that explicitly opt in.
-
-5. Keep sample configs in `templates/` working.
-
-   * After changes, the existing templates (e.g. `merge_external_audio.yml`) should still run as before.
-
----
-
-## 4. Adding a New Action (Example Workflow)
-
-Let’s say you want to add `extract_audio`.
-
-### 4.1. Update action type
-
-In `packages/core/src/domain/Step.ts`:
-
-```ts
-export type StepAction =
-  | 'compress_video'
-  | 'merge_audio'
-  | 'extract_audio'      // <-- add here
-  | 'trim'
-  | 'normalize_audio'
-  | 'dedupe_media';
+```sh
+npm install
+npm test
 ```
 
-Ensure the Zod schema in `yaml/schema.ts` also includes `'extract_audio'` in its `action` enum.
+`npm test` builds both packages and runs the core and CLI tests. ffmpeg and ffprobe must be on `PATH` to run the media integration tests. Those tests skip when the tools are unavailable.
 
-### 4.2. Implement the action
+Try a template without writing output:
 
-Create `packages/core/src/ffmpeg/actions/extractAudio.ts`:
-
-```ts
-import { BaseStep } from '../../domain/Step';
-
-export interface ExtractAudioStep extends BaseStep {
-  action: 'extract_audio';
-  format?: 'mp3' | 'wav' | 'flac';
-  quality?: 'low' | 'medium' | 'high';
-  bitrate?: string; // e.g. "128k"
-}
-
-export function buildExtractAudioArgs(
-  step: ExtractAudioStep,
-  inputFile: string,
-  outputFile: string
-): string[] {
-  const args: string[] = ['-hide_banner', '-y', '-i', inputFile];
-
-  const format = step.format ?? 'mp3';
-  const quality = step.quality ?? 'medium';
-
-  args.push('-vn'); // drop video
-
-  if (format === 'mp3') {
-    args.push('-c:a', 'libmp3lame');
-  }
-
-  if (step.bitrate) {
-    args.push('-b:a', step.bitrate);
-  } else {
-    const bitrate =
-      quality === 'high' ? '192k' :
-      quality === 'low'  ? '96k'  :
-                           '128k';
-    args.push('-b:a', bitrate);
-  }
-
-  args.push(outputFile);
-  return args;
-}
+```sh
+node packages/cli/dist/index.js validate templates/compress_video.yml
+node packages/cli/dist/index.js dry-run templates/compress_video.yml
 ```
 
-### 4.3. Wire into the action dispatcher
+The template's input glob must match files for `dry-run` to plan a job.
 
-In `packages/core/src/ffmpeg/actions/index.ts`:
+## Find the code
 
-```ts
-import { ExtractAudioStep, buildExtractAudioArgs } from './extractAudio';
+| Area | Responsibility |
+| --- | --- |
+| `packages/cli/src` | CLI commands and `--set` arguments |
+| `packages/core/src/yaml` | YAML loading, overrides, validation, and setting groups |
+| `packages/core/src/planner` | Glob expansion, video/audio pairing, and output names |
+| `packages/core/src/engine` | Job checks, step execution, temporary files, and cleanup |
+| `packages/core/src/ffmpeg/actions` | One schema and ffmpeg argument builder per action |
+| `packages/core/src/ffmpeg` | ffmpeg execution and ffprobe parsing |
+| `packages/core/test`, `packages/cli/test` | Behavior and media integration tests |
 
-export function buildArgsForStep(step: BaseStep, ctx: StepContext): string[] {
-  switch (step.action) {
-    case 'extract_audio':
-      if (ctx.inputFiles.length < 1) {
-        throw new Error('extract_audio requires one input file');
-      }
-      return buildExtractAudioArgs(
-        step as ExtractAudioStep,
-        ctx.inputFiles[0],
-        ctx.outputFile
-      );
+Read [ARCHITECTURE.md](ARCHITECTURE.md) for the execution flow and [CONFIGURATION.md](CONFIGURATION.md) for YAML settings and override precedence.
 
-    // existing cases, e.g.:
-    // case 'merge_audio': ...
-    // case 'compress_video': ...
-  }
-}
-```
+## Add an action
 
-### 4.4. Add a sample template
+1. Create an action module in `packages/core/src/ffmpeg/actions`. Define a strict Zod schema for its YAML fields and a function that builds ffmpeg arguments.
+2. Wrap them with `defineAction` from `action.ts`. Specify the input and output media kinds, output extensions, intermediate extension, and whether a probe or paired audio input is needed.
+3. Register the definition in `actions/index.ts`. `yaml/schema.ts` checks registered actions automatically; there is no separate action union or switch to update.
+4. Add an executable template and tests for valid and invalid YAML, command arguments, and the resulting media where practical.
 
-Create `templates/lectures_to_podcast.yml`:
+Keep action-specific defaults in `actions/defaults.ts`. Add a setting group to `yaml/settings.ts` when users need a job-wide value. Prefer an optional step field when a value should vary by step. Resolution should follow the documented order: step field, job setting, built-in default. CLI `--set` changes the YAML object before validation.
 
-```yaml
-version: 1
-job:
-  name: "lectures_to_podcast_audio"
+Actions build arguments only. The planner owns file selection and pairing; the engine owns execution and temporary files. A new action should not launch ffmpeg itself.
 
-  for_each:
-    glob: "input/lectures/**/*.mp4"
+## Preserve existing jobs
 
-  output:
-    directory: "output/podcast"
-    filename: "{basename}.mp3"
+- Keep version 1 action names, field names, and existing values working.
+- Add optional fields with defaults; reject misspelled or unsupported fields through the action schema.
+- Keep the stock templates valid. If a change requires incompatible behavior, introduce a new YAML version.
+- Check the impact of any new output type on extension validation, intermediate files, and pipeline input/output kinds.
+- Add a focused regression test for behavior that previously failed. Prefer a real media assertion when command construction alone cannot prove the result.
 
-  steps:
-    - action: extract_audio
-      format: mp3
-      quality: medium
-```
+The currently implemented actions are `compress_video`, `merge_audio`, and `extract_audio`. Other actions in [feature-plan.md](feature-plan.md) are proposals.
 
-Users can now run:
+## Style
 
-```bash
-mediasmith run templates/lectures_to_podcast.yml
-```
+Use two-space indentation, single quotes in TypeScript, and explicit return types on public functions. Name helpers for the rule they implement. Split long functions where each part has a distinct responsibility. Keep error messages actionable and use the same wording in related code and tests. Avoid `as` casts and non-null assertions unless the invariant is documented and checked.
 
-### 4.5. Add tests
-
-* Add a test that:
-
-  * Loads `lectures_to_podcast.yml`.
-  * Plans the job.
-  * Asserts that the built ffmpeg args include `-vn`, `-c:a libmp3lame`, etc.
-
----
-
-## 5. Working on Pairing / Normalization Logic
-
-For more complex file naming patterns (e.g. `*-audio.mp4` vs `*(720p No Audio).mp4`):
-
-* Prefer **config-driven** normalization over hard-coded hacks.
-
-* Example idea (future):
-
-  ```yaml
-  for_each_pairs:
-    video_pattern: "input/video/**/*.mp4"
-    audio_pattern: "input/audio/**/*.mp4"
-    pair_by: normalized_basename
-    normalize:
-      video:
-        remove_suffix: " (720p No Audio)"
-      audio:
-        remove_suffix: "-audio"
-  ```
-
-* Implement normalization in `planner/` so new naming schemes can be supported just by editing YAML, not code.
-
-If you must add normalization now but don’t have the schema yet, keep the implementation:
-
-* Localized to the pairing module.
-* Clearly commented as a candidate for YAML-driven config in the future.
-
----
-
-## 6. Modifying the CLI
-
-When changing CLI behavior:
-
-* Keep existing commands intact:
-
-  * `run`
-  * `dry-run`
-  * `validate`
-
-* Add new commands as separate entries, e.g.:
-
-  ```txt
-  watch           # watch a directory and auto-run a template
-  list-templates  # show available templates
-  ```
-
-* Existing flags should keep their behavior.
-
-* New flags must be **optional** and have safe defaults, e.g.:
-
-  ```bash
-  mediasmith run config.yml --concurrency 4
-  ```
-
----
-
-## 7. Code Style & Conventions
-
-* Use TypeScript strict mode (already enabled via `tsconfig.base.json`).
-* Keep modules small and focused:
-
-  * One action per file in `ffmpeg/actions/`.
-* Favor explicit types on public functions.
-* Don’t export internal helpers from `index.ts` of a package; keep the public surface small:
-
-  * `@mediasmith/core` should expose just the engine entrypoints (`loadJobConfig`, `runJobFromConfig`, etc.).
-
----
-
-## 8. Opening a Pull Request
-
-When you open a PR:
-
-1. **Describe the change**:
-
-   * New actions?
-   * New fields in YAML?
-   * Planner / CLI enhancements?
-
-2. **Explain impact on existing configs**:
-
-   * Confirm that stock templates in `templates/` still work.
-   * If anything could break older configs, call it out clearly.
-
-3. **Include tests**:
-
-   * At least one test for each new action or planner behavior.
-   * For CLI changes, tests for basic invocation (if you have CLI tests set up).
-
-4. **Keep commits logical**:
-
-   * Separate refactors from feature additions when possible.
-
----
-
-Thank you for contributing to MediaSmith! 🚀
-Every improvement makes it easier for people to tame messy media workflows with simple, readable YAML.
-
-```
+Before opening a pull request, run `npm test` and describe any change to YAML, CLI behavior, or output media.

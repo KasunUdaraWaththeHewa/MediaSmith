@@ -1,27 +1,7 @@
-import { BaseStep } from './Step';
+import type { JobConfigValidated } from '../yaml/schema';
 
-export interface ForEachGlob {
-  glob: string;
-}
-
-export interface ForEachPairs {
-  video_pattern: string;
-  audio_pattern: string;
-  pair_by: 'basename';
-}
-
-export interface OutputPattern {
-  directory: string;
-  filename: string; // e.g. "{basename}_final.mp4"
-}
-
-export interface JobConfig {
-  version: number;
-  job: {
-    name: string;
-    for_each?: ForEachGlob;
-    for_each_pairs?: ForEachPairs;
-    output: OutputPattern;
-    steps: BaseStep[];
-  };
-}
+// Keep the public domain name while deriving its shape from the runtime schema.
+export type JobConfig = JobConfigValidated;
+export type ForEachGlob = NonNullable<JobConfig['job']['for_each']>;
+export type ForEachPairs = NonNullable<JobConfig['job']['for_each_pairs']>;
+export type OutputPattern = JobConfig['job']['output'];

@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import { runCommand } from './commands/run';
 import { dryRunCommand } from './commands/dryRun';
 import { validateCommand } from './commands/validate';
+import { collectSet } from './commands/options';
 
 const program = new Command();
 
@@ -14,16 +15,22 @@ program
 program
   .command('run')
   .argument('<config>', 'Path to YAML config file')
+  .option('--set <path=value>', 'Override a job field (repeatable)', collectSet, [])
   .action(runCommand);
 
 program
   .command('dry-run')
   .argument('<config>', 'Path to YAML config file')
+  .option('--set <path=value>', 'Override a job field (repeatable)', collectSet, [])
   .action(dryRunCommand);
 
 program
   .command('validate')
   .argument('<config>', 'Path to YAML config file')
+  .option('--set <path=value>', 'Override a job field (repeatable)', collectSet, [])
   .action(validateCommand);
 
-program.parse(process.argv);
+program.parseAsync(process.argv).catch(error => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});

@@ -1,12 +1,5 @@
-export type StepAction =
-  | 'compress_video'
-  | 'merge_audio'
-  | 'extract_audio'
-  | 'trim'
-  | 'normalize_audio'
-  | 'dedupe_media';
+import type { StepSchema } from '../yaml/schema';
+import type { z } from 'zod';
 
-export interface BaseStep {
-  action: StepAction;
-  [key: string]: any;
-}
+export type BaseStep = z.infer<typeof StepSchema>;
+export type StepAction = BaseStep['action'];
