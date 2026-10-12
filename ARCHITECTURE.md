@@ -7,16 +7,16 @@ For the supported feature snapshot and current limits, see [Implementation.md](I
 1. `yaml/loader.ts` reads YAML and validates it with `yaml/schema.ts`.
    `yaml/overrides.ts` applies CLI `--set` values before validation; `yaml/settings.ts` defines grouped setting shapes.
 2. `planner/batchPlanner.ts` expands a glob or video/audio pair pattern into tasks with named inputs and stable task IDs.
-3. `engine/planValidator.ts` checks output collisions, input overlap, pipeline media kinds, and final extensions. It returns a prepared plan whose action steps hold validated options. `engine/jobRunner.ts` orchestrates those tasks in order.
+3. `engine/planValidator.ts` checks output collisions, input overlap (including directory aliases), pipeline media kinds, and final extensions. It prepares each shared step list once. `engine/preflight.ts` probes source streams and checks video and audio requirements before the first task runs.
 4. Each step is looked up in `ffmpeg/actions/index.ts`. Its module owns option validation, ffmpeg argument construction, and any action-specific job or output checks.
-5. `engine/taskRunner.ts` owns task order, temporary files, publication, and cleanup. `engine/stepRunner.ts` renders one step and checks that step's own output before it becomes the next primary input. The final temporary file is renamed to the requested output.
+5. `engine/taskRunner.ts` owns task order, temporary files, publication, and cleanup. `engine/stepRunner.ts` checks required streams in intermediate inputs, renders one step, and checks that step's own output before it becomes the next primary input. The final temporary file is renamed to the requested output.
 
-`dry-run` performs the same planning and argument construction without creating directories or running ffmpeg. It probes the original input when a step needs metadata and carries estimated metadata through actions. Compression estimates scaled dimensions; merging external audio marks the preview as having audio. An action that changes media metadata must provide an estimator before a later probe-dependent step can be previewed. Estimates may differ slightly from the rendered file because ffmpeg determines final stream details.
+`dry-run` performs the same planning and argument construction without creating directories or running ffmpeg. Preflight probes source streams, and dry-run carries estimated metadata through actions. Compression estimates scaled dimensions; merging external audio marks the preview as having audio. An action that changes media metadata must provide an estimator before a later probe-dependent step can be previewed. Estimates may differ slightly from the rendered file because ffmpeg determines final stream details.
 
 ## Adding an action
 
 1. Add a module under `packages/core/src/ffmpeg/actions/` with a Zod schema for its YAML fields and a command builder.
-2. Wrap both with `defineAction` from `action.ts`. Declare input/output media kinds, supported and intermediate extensions, and `needsProbe` or `needsExternalAudio` when applicable. Use `validateJobStep` for checks against job settings, `validateOutput` for checks on that step's rendered file, and `estimateProbe` when the action changes metadata needed by a later dry-run step.
+2. Wrap both with `defineAction` from `action.ts`. Declare input/output media kinds, supported and intermediate extensions, and `needsProbe`, `needsPrimaryAudio`, or `needsExternalAudio` when applicable. Use `validateJobStep` for checks against job settings, `validateOutput` for checks on that step's rendered file, and `estimateProbe` when the action changes metadata needed by a later dry-run step.
 3. Register the action in `actions/index.ts`. The YAML schema then recognizes it automatically.
 4. Add an executable template and tests for valid and invalid options, dry-run output, and real media output.
 

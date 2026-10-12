@@ -37,6 +37,8 @@ The complete example is [templates/custom_profile.yml](templates/custom_profile.
 
 The `compress_video` step can override `max_width`, `video_bitrate_kbps`, `audio_bitrate_kbps`, and `preset` in addition to its existing `profile`, `quality`, and `max_size_mb` fields. The `merge_audio` step can override `audio_bitrate_kbps` and its mix volumes. The `extract_audio` step still accepts `bitrate` for one MP3 step.
 
+`max_width` must be at least 2 pixels, including inside named compression profiles. This keeps the requested limit compatible with the encoder's even output dimensions.
+
 Built-in profiles `whatsapp` and `youtube_hd` remain available. Add a named profile under `job.settings.compress_video.profiles`, or override a field of a built-in profile there.
 
 Compression quality defaults are `low: { crf: 28, bitrate_factor: 0.75 }`, `medium: { crf: 23, bitrate_factor: 1 }`, and `high: { crf: 20, bitrate_factor: 1.6 }`. `crf` applies when no `max_size_mb` is set; `bitrate_factor` applies when a size limit is set. For example, `--set settings.compress_video.quality.high.crf=18` changes the high-quality CRF for the job.

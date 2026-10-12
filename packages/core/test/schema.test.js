@@ -94,3 +94,17 @@ test('schema validates extraction options against format', () => {
     false
   );
 });
+
+test('width limits reject values the encoder cannot honor', () => {
+  assert.equal(
+    JobSchema.safeParse(configWith({ steps: [{ action: 'compress_video', max_width: 1 }] }))
+      .success,
+    false
+  );
+  assert.equal(
+    JobSchema.safeParse(
+      configWith({ settings: { compress_video: { profiles: { tiny: { max_width: 1 } } } } })
+    ).success,
+    false
+  );
+});

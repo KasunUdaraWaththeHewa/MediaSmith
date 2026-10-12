@@ -38,7 +38,7 @@ node packages/cli/dist/index.js dry-run templates/whatsapp_batch.yml
 node packages/cli/dist/index.js run templates/whatsapp_batch.yml
 ```
 
-`validate` checks the YAML and action options. `dry-run` also expands the input glob, checks the plan, and prints the ffmpeg commands without writing output. `run` writes the processed file to `output/whatsapp/`.
+`validate` checks the YAML and action options. `dry-run` also expands the input glob, checks source media streams and the plan, and prints the ffmpeg commands without writing output. `run` writes the processed file to `output/whatsapp/`.
 
 Task IDs and dry-run commands are stable for the same job and inputs. Ctrl+C cancels an active job and cleans its temporary files.
 

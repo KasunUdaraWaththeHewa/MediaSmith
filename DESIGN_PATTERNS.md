@@ -28,7 +28,7 @@ To add an action, create one module under `ffmpeg/actions/`, call `defineAction`
 `defineAction` provides two entry points:
 
 - `tryPrepare(step)` returns either validation issues or a prepared step. The YAML schema uses it to report field errors.
-- `prepare(step)` returns a prepared step or throws. Plan validation calls it once per task step. The prepared plan carries those steps to the task runner. Each prepared step closes over typed options returned by Zod, so command building, output checks, and dry-run estimation use those options without reparsing them.
+- `prepare(step)` returns a prepared step or throws. Plan validation calls it once per shared step list, then reuses the prepared handlers across tasks that use that list. Each prepared step closes over typed options returned by Zod, so command building, output checks, and dry-run estimation use those options without reparsing them.
 
 YAML validation and plan preparation are separate phases, so the plan checks its inputs independently. Callers pass prepared steps through execution instead of calling `prepare` for each method.
 
@@ -36,7 +36,7 @@ YAML validation and plan preparation are separate phases, so the plan checks its
 
 Calculations belong in functions that take values and return values. `compressionSettings.ts` resolves built-in defaults, job settings, profiles, and step options. `compressionMath.ts` calculates dimensions and bitrate without reading files or launching a process. These functions are straightforward to test with small inputs.
 
-Filesystem work and child processes stay at the edges: `yaml/loader.ts` reads config files, `ffmpeg/ffprobe.ts` probes input media, `ffmpeg/executor.ts` runs ffmpeg, `engine/stepRunner.ts` renders one step, and `engine/taskRunner.ts` owns temporary files and cleanup. `compressVideo.ts` connects the calculations to ffmpeg arguments and checks the rendered output.
+Filesystem work and child processes stay at the edges: `yaml/loader.ts` reads config files, `ffmpeg/ffprobe.ts` validates probed media, `engine/preflight.ts` checks source streams, `ffmpeg/executor.ts` runs ffmpeg, `engine/stepRunner.ts` renders one step, and `engine/taskRunner.ts` owns temporary files and cleanup. `compressVideo.ts` connects the calculations to ffmpeg arguments and checks the rendered output.
 
 When adding a configurable value, define its shape in `yaml/settings.ts`, its built-in value in `ffmpeg/actions/defaults.ts`, and its resolution beside the action. Resolution order is step field, job setting, then built-in default. CLI `--set` changes a YAML field before validation; it does not change that resolution order.
 
@@ -44,7 +44,7 @@ When adding a configurable value, define its shape in `yaml/settings.ts`, its bu
 
 An action declares `inputKind` and `outputKind`. `engine/planValidator.ts` checks that consecutive steps are compatible and that the final output extension is supported. Task inputs have named `primary` and optional `externalAudio` roles. `engine/taskRunner.ts` passes each temporary output as the next step's primary input. `engine/stepRunner.ts` invokes the action's `validateOutput` hook on that step's rendered file before continuing.
 
-Dry-run cannot probe a temporary file that was never rendered. It probes the original media once when a step needs metadata, then calls each prepared action's `estimateProbe` hook to carry an estimate forward. Compression estimates scaled dimensions; merging external audio marks audio as present. A new action that changes metadata used by a later step must provide an estimator. If the estimate becomes unavailable, dry-run reports which step needs it. ffmpeg remains the source of truth for exact rendered metadata.
+Dry-run cannot probe a temporary file that was never rendered. Source preflight probes the original media, then dry-run calls each prepared action's `estimateProbe` hook to carry an estimate forward. Compression estimates scaled dimensions; merging external audio marks audio as present. A new action that changes metadata used by a later step must provide an estimator. If the estimate becomes unavailable, dry-run reports which step needs it. ffmpeg remains the source of truth for exact rendered metadata.
 
 ## Structured errors
 
@@ -83,7 +83,7 @@ The planner should reserve every destination path and reject collisions with inp
 ## Action contribution checklist
 
 1. Define and register a strict action schema and argument builder.
-2. Declare media kinds, extensions, probe and external-input needs, and relevant hooks.
+2. Declare media kinds, extensions, probe, primary-audio, and external-input needs, and relevant hooks.
 3. Add optional grouped settings and built-in defaults if the value should be configurable across a job.
 4. Add tests for valid and invalid YAML, argument construction, dry-run metadata, and rendered media where behavior depends on ffmpeg.
 5. Add a template, update the configuration and code map docs, and run `npm test`.

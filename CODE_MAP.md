@@ -18,11 +18,12 @@ This map covers the hand-written source under `packages/core/src` and `packages/
 | `yaml/settings.ts`                      | Validate grouped job settings                                                              |
 | `planner/batchPlanner.ts`               | Expand input patterns, pair files, and build tasks                                         |
 | `engine/planValidator.ts`               | Check output paths and pipeline compatibility; prepare action steps                        |
+| `engine/preflight.ts`                   | Probe source streams and reject missing required media before tasks start                  |
 | `engine/jobRunner.ts`                   | Plan, validate, and run tasks in sequence                                                  |
 | `engine/taskRunner.ts`                  | Execute a task through temporary files and clean them up                                   |
 | `engine/stepRunner.ts`                  | Render and validate one prepared step                                                      |
 | `engine/options.ts`                     | Runtime options, including cancellation and process injection                              |
-| `ffmpeg/ffprobe.ts`                     | Collect video metadata from ffprobe                                                        |
+| `ffmpeg/ffprobe.ts`                     | Collect and validate media metadata from ffprobe                                           |
 | `ffmpeg/executor.ts`                    | Run ffmpeg or log its dry-run command                                                      |
 | `ffmpeg/processRunner.ts`               | Default process adapter and injectable process contract                                    |
 | `ffmpeg/terminateProcess.ts`            | Wait for child-process close and stop active processes, including Windows shim descendants |

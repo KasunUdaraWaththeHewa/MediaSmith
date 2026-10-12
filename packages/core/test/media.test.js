@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const { setTimeout, clearTimeout } = require('node:timers');
 const { JobSchema, MediaSmithError, runJobFromConfig } = require('../dist');
 const { runFfmpeg } = require('../dist/ffmpeg/executor');
+const { ffprobeVideo } = require('../dist/ffmpeg/ffprobe');
 const {
   hasTool,
   inWorkspace,
@@ -236,7 +237,6 @@ test(
 test('failed media jobs clean up temporary files', needsMediaTools, async () => {
   await inWorkspace('mediasmith-media-', async () => {
     createMediaFiles();
-    fs.writeFileSync('audio/one.wav', 'invalid audio');
     const config = job(
       'invalid_audio',
       { for_each_pairs: pairedFiles },
@@ -244,8 +244,15 @@ test('failed media jobs clean up temporary files', needsMediaTools, async () => 
       '{basename}.mp4',
       [{ action: 'merge_audio', audio_source: 'external_only' }]
     );
+    const processRunner = {
+      probeVideo: ffprobeVideo,
+      runFfmpeg: async (args) => {
+        fs.writeFileSync(args.at(-1), 'partial output');
+        throw new Error('render failure');
+      }
+    };
     await assert.rejects(
-      runJobFromConfig(config),
+      runJobFromConfig(config, { processRunner }),
       (error) =>
         error instanceof MediaSmithError &&
         error.code === 'TASK' &&

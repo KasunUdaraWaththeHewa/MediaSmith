@@ -68,6 +68,7 @@ export const extractAudioAction = defineAction(
     inputKind: 'video',
     outputKind: 'audio',
     outputExtensions: (step) => [`.${step.format}`],
-    defaultExtension: (step) => `.${step.format}`
+    defaultExtension: (step) => `.${step.format}`,
+    needsPrimaryAudio: () => true
   }
 );

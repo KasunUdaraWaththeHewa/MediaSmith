@@ -104,6 +104,7 @@ export const mergeAudioAction = defineAction(
     outputKind: 'video',
     outputExtensions: () => VIDEO_EXTENSIONS,
     defaultExtension: () => '.mp4',
+    needsPrimaryAudio: (step) => step.audio_source === 'mix',
     needsExternalAudio: true,
     estimateProbe: (_step, probe) => ({ ...probe, hasAudio: true })
   }

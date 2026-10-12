@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import { z } from 'zod';
 import { errorMessage, MediaSmithError } from '../errors';
 import { waitForProcess } from './terminateProcess';
 
@@ -11,6 +12,48 @@ export interface VideoProbeInfo {
 
 export interface ProbeOptions {
   signal?: AbortSignal;
+}
+
+const ProbeResultSchema = z
+  .object({
+    streams: z
+      .array(
+        z
+          .object({
+            codec_type: z.string().optional(),
+            width: z.number().int().nonnegative().optional(),
+            height: z.number().int().nonnegative().optional()
+          })
+          .passthrough()
+      )
+      .optional(),
+    format: z
+      .object({ duration: z.union([z.string(), z.number()]).optional() })
+      .passthrough()
+      .optional()
+  })
+  .passthrough();
+
+export function parseProbeOutput(output: string): VideoProbeInfo {
+  const parsed = ProbeResultSchema.safeParse(JSON.parse(output));
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    throw new Error(`Invalid ffprobe metadata at ${issue.path.join('.')}: ${issue.message}`);
+  }
+  const result = parsed.data;
+  const rawDuration = result.format?.duration;
+  const duration = rawDuration === undefined || rawDuration === 'N/A' ? 0 : Number(rawDuration);
+  if (!Number.isFinite(duration) || duration < 0) {
+    throw new Error('ffprobe returned an invalid duration');
+  }
+  const streams = result.streams ?? [];
+  const video = streams.find((stream) => stream.codec_type === 'video');
+  return {
+    width: video?.width ?? 0,
+    height: video?.height ?? 0,
+    duration,
+    hasAudio: streams.some((stream) => stream.codec_type === 'audio')
+  };
 }
 
 export async function ffprobeVideo(
@@ -59,18 +102,7 @@ export async function ffprobeVideo(
   }
 
   try {
-    const result = JSON.parse(out) as {
-      streams?: Array<{ codec_type?: string; width?: number; height?: number }>;
-      format?: { duration?: string };
-    };
-    const streams = result.streams ?? [];
-    const video = streams.find((stream) => stream.codec_type === 'video');
-    return {
-      width: video?.width ?? 0,
-      height: video?.height ?? 0,
-      duration: Number(result.format?.duration ?? 0),
-      hasAudio: streams.some((stream) => stream.codec_type === 'audio')
-    };
+    return parseProbeOutput(out);
   } catch (error) {
     throw new MediaSmithError(
       'PROCESS',

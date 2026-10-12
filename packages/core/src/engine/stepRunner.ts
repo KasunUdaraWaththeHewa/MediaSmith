@@ -22,14 +22,18 @@ export async function runStep(execution: StepExecution): Promise<VideoProbeInfo 
   const action = step.handler;
   options.signal?.throwIfAborted();
 
-  const probe = action.needsProbe
-    ? options.dryRun
-      ? previewProbe
-      : await processes.probeVideo(inputs.primary, { signal: options.signal })
-    : undefined;
-  if (action.needsProbe && !probe) {
+  const probe =
+    action.needsProbe || action.needsPrimaryAudio
+      ? options.dryRun
+        ? previewProbe
+        : (previewProbe ?? (await processes.probeVideo(inputs.primary, { signal: options.signal })))
+      : undefined;
+  if ((action.needsProbe || action.needsPrimaryAudio) && !probe) {
+    throw new Error(`Cannot inspect media metadata for step ${stepIndex + 1} (${step.action})`);
+  }
+  if (action.needsPrimaryAudio && !probe?.hasAudio) {
     throw new Error(
-      `Cannot estimate media metadata for dry-run step ${stepIndex + 1} (${step.action})`
+      `Step ${stepIndex + 1} (${step.action}) requires an audio stream in ${inputs.primary}`
     );
   }
 
@@ -42,7 +46,5 @@ export async function runStep(execution: StepExecution): Promise<VideoProbeInfo 
     // Check this step's file now; a later action may produce a different format or size.
     await action.validateOutput(outputFile);
   }
-  return options.dryRun && previewProbe
-    ? action.estimateProbe(previewProbe, settings)
-    : previewProbe;
+  return options.dryRun && previewProbe ? action.estimateProbe(previewProbe, settings) : undefined;
 }

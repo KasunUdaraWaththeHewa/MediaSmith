@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const PositiveInteger = z.number().int().positive().finite();
+export const MaxWidthSchema = PositiveInteger.min(2);
 export const NonnegativeNumber = z.number().finite().nonnegative();
 
 export const PresetSchema = z.enum([
@@ -26,7 +27,7 @@ const QualitySettingsSchema = z
 
 export const VideoProfileSchema = z
   .object({
-    max_width: PositiveInteger.optional(),
+    max_width: MaxWidthSchema.optional(),
     video_bitrate_kbps: PositiveInteger.optional()
   })
   .strict();

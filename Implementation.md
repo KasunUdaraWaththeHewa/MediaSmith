@@ -7,7 +7,7 @@ This page records what MediaSmith **does now**. Update it with code changes that
 - **CLI:** `validate` parses YAML and checks registered action options. `dry-run` also expands inputs, validates the plan, and prints ffmpeg commands without writing outputs. `run` executes the plan. All three accept repeatable `--set path=value` overrides.
 - **YAML:** Version 1 jobs use exactly one of `for_each.glob` or `for_each_pairs`, one `output` pattern, and an ordered `steps` list. Grouped action settings live under `job.settings`. Unknown actions and unsupported fields fail validation.
 - **Input selection:** File globs and video/audio pairs by `basename` or `normalized_basename` are supported. Normalization removes configured prefixes and suffixes. Empty globs, unmatched pairs, and duplicate audio pairing keys fail planning.
-- **Actions:** `compress_video` compresses or scales video, optionally targeting a maximum size. `merge_audio` replaces or mixes paired external audio. `extract_audio` produces MP3, WAV, or FLAC. Compatible steps can form a pipeline.
+- **Actions:** `compress_video` compresses or scales video, optionally targeting a maximum size; width limits below 2 pixels are invalid. `merge_audio` replaces or mixes paired external audio. `extract_audio` produces MP3, WAV, or FLAC. Compatible steps can form a pipeline.
 - **Outputs:** `{basename}` and `{ext}` are supported in output filenames. The final extension must match the last action. Each task has one final output; intermediate step files remain temporary.
 - **Configuration:** Built-in values can be adjusted with `job.settings`, per-step fields, and exact CLI `--set` overrides. Overrides are applied before schema validation. See [CONFIGURATION.md](CONFIGURATION.md) for fields and precedence.
 - **Cancellation:** Ctrl+C or SIGTERM aborts an active job, stops ffmpeg/ffprobe processes, and removes task temporary files.
@@ -16,11 +16,12 @@ This page records what MediaSmith **does now**. Update it with code changes that
 
 1. `yaml/loader.ts` reads YAML, applies `--set`, and validates the result with action schemas from the registry.
 2. `planner/batchPlanner.ts` resolves files and builds tasks with named inputs and stable path-derived IDs.
-3. `engine/planValidator.ts` rejects incompatible pipelines, output collisions, and input/output overlap; it prepares each action for execution.
-4. `engine/jobRunner.ts` runs tasks serially. `engine/taskRunner.ts` manages temporary outputs and publishes the final file after all steps succeed. `engine/stepRunner.ts` probes when needed, runs one ffmpeg step, and validates that step's output.
-5. `ffmpeg/processRunner.ts` separates process execution from the engine. Config, plan, task, and process failures carry structured context through `MediaSmithError`.
+3. `engine/planValidator.ts` rejects incompatible pipelines, output collisions, and input/output overlap, including existing directory aliases. It prepares a shared step list once for the tasks that use it.
+4. `engine/preflight.ts` inspects source streams before tasks run. It requires video on primary inputs, audio where an action needs it, and audio on paired external inputs. Later steps check required audio in their intermediate input before encoding.
+5. `engine/jobRunner.ts` runs tasks serially. `engine/taskRunner.ts` manages temporary outputs and publishes the final file after all steps succeed. `engine/stepRunner.ts` probes when needed, runs one ffmpeg step, and validates that step's output.
+6. `ffmpeg/processRunner.ts` separates process execution from the engine. The ffprobe adapter validates parsed metadata before using it. Config, plan, task, and process failures carry structured context through `MediaSmithError`.
 
-Dry-run follows the same plan without creating directories or media files. It probes the source when needed and carries estimated metadata through later steps. The estimate may differ from ffmpeg's rendered result. Real runs use unique temporary paths; dry-run uses stable preview paths so repeated plans are comparable.
+Dry-run follows the same plan without creating directories or media files. It probes source streams during preflight and carries estimated metadata through later steps. The estimate may differ from ffmpeg's rendered result. Real runs use unique temporary paths; dry-run uses stable preview paths so repeated plans are comparable.
 
 ## Verification and current limits
 

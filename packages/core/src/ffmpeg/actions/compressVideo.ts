@@ -5,7 +5,7 @@ import { defineAction } from './action';
 import { VIDEO_EXTENSIONS } from './formats';
 import { outputDimensions, targetVideoBitrateKbps } from './compressionMath';
 import { resolveCompressionSettings, validateCompressionProfile } from './compressionSettings';
-import { PositiveInteger, PresetSchema, QualitySchema } from '../../yaml/settings';
+import { MaxWidthSchema, PositiveInteger, PresetSchema, QualitySchema } from '../../yaml/settings';
 import type { JobSettings } from '../../yaml/settings';
 
 export const CompressVideoSchema = z
@@ -14,7 +14,7 @@ export const CompressVideoSchema = z
     profile: z.string().min(1).optional(),
     quality: QualitySchema.optional(),
     max_size_mb: z.number().finite().positive().optional(),
-    max_width: PositiveInteger.optional(),
+    max_width: MaxWidthSchema.optional(),
     video_bitrate_kbps: PositiveInteger.optional(),
     audio_bitrate_kbps: PositiveInteger.optional(),
     preset: PresetSchema.optional()

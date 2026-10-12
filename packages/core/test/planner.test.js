@@ -6,6 +6,7 @@ const { JobSchema, MediaSmithError, runJobFromConfig } = require('../dist');
 const { planJob } = require('../dist/planner/batchPlanner');
 const { validatePlan } = require('../dist/engine/planValidator');
 const { runTask } = require('../dist/engine/taskRunner');
+const { runFfmpeg } = require('../dist/ffmpeg/executor');
 const { inWorkspace } = require('./helpers/media');
 
 function pairedJob() {
@@ -50,8 +51,20 @@ test('normalized pairing creates the expected output without dry-run writes', as
     assert.equal(plan.tasks[0].outputFile, path.join('output', 'one_final.mp4'));
     const firstPreview = [];
     const secondPreview = [];
-    await runJobFromConfig(config, { dryRun: true, onLog: (line) => firstPreview.push(line) });
-    await runJobFromConfig(config, { dryRun: true, onLog: (line) => secondPreview.push(line) });
+    const processRunner = {
+      probeVideo: async () => ({ width: 32, height: 32, duration: 1, hasAudio: true }),
+      runFfmpeg
+    };
+    await runJobFromConfig(config, {
+      dryRun: true,
+      processRunner,
+      onLog: (line) => firstPreview.push(line)
+    });
+    await runJobFromConfig(config, {
+      dryRun: true,
+      processRunner,
+      onLog: (line) => secondPreview.push(line)
+    });
     assert.deepEqual(firstPreview, secondPreview);
     assert.equal(fs.existsSync('output'), false);
   });
@@ -79,6 +92,32 @@ test('planning rejects colliding outputs and ambiguous audio keys', async () => 
     fs.writeFileSync('audio/sub/one-audio.wav', 'placeholder');
     config.job.for_each_pairs.audio_pattern = 'audio/**/*.wav';
     await assert.rejects(planJob(config), /Ambiguous audio pairing key/);
+  });
+});
+
+test('planning recognizes an output directory that aliases an input directory', async (t) => {
+  await inWorkspace('mediasmith-plan-', async () => {
+    fs.mkdirSync('video');
+    fs.writeFileSync('video/one.mp4', 'placeholder');
+    try {
+      fs.symlinkSync(path.resolve('video'), 'alias', 'junction');
+    } catch (error) {
+      if (error.code === 'EPERM' || error.code === 'EACCES') {
+        t.skip('This environment cannot create directory links');
+        return;
+      }
+      throw error;
+    }
+    const config = JobSchema.parse({
+      version: 1,
+      job: {
+        name: 'alias',
+        for_each: { glob: 'video/*.mp4' },
+        output: { directory: 'alias', filename: '{basename}.mp4' },
+        steps: [{ action: 'compress_video' }]
+      }
+    });
+    await assert.rejects(runJobFromConfig(config, { dryRun: true }), /overwrite an input file/);
   });
 });
 
@@ -120,7 +159,11 @@ test('execution uses the action options prepared during plan validation', async 
     plan.tasks[0].steps[0].format = 'wav';
 
     const logs = [];
-    await runTask(prepared.tasks[0], { dryRun: true, onLog: (line) => logs.push(line) });
+    await runTask(
+      prepared.tasks[0],
+      { dryRun: true, onLog: (line) => logs.push(line) },
+      { width: 32, height: 32, duration: 1, hasAudio: true }
+    );
     assert.match(
       logs.find((line) => line.startsWith('ffmpeg ')),
       /libmp3lame/
@@ -146,9 +189,7 @@ test('cancelling a process cleans temporary output and stops later tasks', async
     const controller = new AbortController();
     const commands = [];
     const processRunner = {
-      probeVideo: async () => {
-        throw new Error('extract_audio does not need probing');
-      },
+      probeVideo: async () => ({ width: 32, height: 32, duration: 1, hasAudio: true }),
       runFfmpeg: async (args, options) => {
         commands.push(args);
         fs.writeFileSync(args.at(-1), 'partial');

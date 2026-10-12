@@ -41,7 +41,7 @@ Read [CODE_MAP.md](CODE_MAP.md) for each source file's role, [ARCHITECTURE.md](A
 ## Add an action
 
 1. Create an action module in `packages/core/src/ffmpeg/actions`. Define a strict Zod schema for its YAML fields and a function that builds ffmpeg arguments.
-2. Wrap them with `defineAction` from `action.ts`. Specify the input and output media kinds, output extensions, intermediate extension, and whether a probe or paired audio input is needed. Use action hooks for job-level and rendered-output checks. If the action changes dimensions, duration, or audio presence, supply `estimateProbe` for downstream dry-run steps.
+2. Wrap them with `defineAction` from `action.ts`. Specify the input and output media kinds, output extensions, intermediate extension, and whether a probe, primary audio stream, or paired audio input is needed. Use action hooks for job-level and rendered-output checks. If the action changes dimensions, duration, or audio presence, supply `estimateProbe` for downstream dry-run steps.
 3. Register the definition in `actions/index.ts`. `yaml/schema.ts` checks registered actions automatically; there is no separate action union or switch to update.
 4. Add an executable template and tests for valid and invalid YAML, command arguments, and the resulting media where practical.
 

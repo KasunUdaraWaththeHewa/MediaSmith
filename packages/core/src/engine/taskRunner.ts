@@ -35,7 +35,11 @@ async function removeTemporaryFiles(files: string[], onLog?: RunOptions['onLog']
   }
 }
 
-export async function runTask(task: PreparedTask, options: RunOptions): Promise<void> {
+export async function runTask(
+  task: PreparedTask,
+  options: RunOptions,
+  sourceProbe?: VideoProbeInfo
+): Promise<void> {
   options.onLog?.(`Task ${task.id}: ${inputPaths(task.inputs).join(', ')} -> ${task.outputFile}`);
   const temporaryFiles: string[] = [];
   // Real runs need unique paths; previews use a fixed token for reproducible logs.
@@ -47,8 +51,12 @@ export async function runTask(task: PreparedTask, options: RunOptions): Promise<
     options.signal?.throwIfAborted();
     const processes = options.processRunner ?? defaultMediaProcessRunner;
     const preparedSteps = task.steps;
-    let previewProbe: VideoProbeInfo | undefined;
-    if (options.dryRun && preparedSteps.some((step) => step.handler.needsProbe)) {
+    let previewProbe: VideoProbeInfo | undefined = sourceProbe;
+    if (
+      options.dryRun &&
+      !previewProbe &&
+      preparedSteps.some((step) => step.handler.needsProbe || step.handler.needsPrimaryAudio)
+    ) {
       // Later preview steps use estimated metadata because intermediate files do not exist.
       previewProbe = await processes.probeVideo(currentInput, { signal: options.signal });
     }

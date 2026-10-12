@@ -19,6 +19,7 @@ export interface PreparedActionStep {
   inputKind: 'video' | 'audio';
   outputKind: 'video' | 'audio';
   needsProbe: boolean;
+  needsPrimaryAudio: boolean;
   needsExternalAudio: boolean;
   outputExtensions: readonly string[];
   defaultExtension: string;
@@ -48,6 +49,7 @@ interface ActionOptions<S extends z.ZodTypeAny> {
   outputExtensions: (step: z.infer<S>) => readonly string[];
   defaultExtension: (step: z.infer<S>) => string;
   needsProbe?: boolean;
+  needsPrimaryAudio?: (step: z.infer<S>) => boolean;
   needsExternalAudio?: boolean;
   validateJobStep?: (step: z.infer<S>, settings?: JobSettings) => ActionValidationIssue | undefined;
   validateOutput?: (step: z.infer<S>, outputFile: string) => Promise<void>;
@@ -71,6 +73,7 @@ export function defineAction<S extends z.ZodTypeAny>(
       inputKind: options.inputKind,
       outputKind: options.outputKind,
       needsProbe: options.needsProbe ?? false,
+      needsPrimaryAudio: options.needsPrimaryAudio?.(parsed) ?? false,
       needsExternalAudio: options.needsExternalAudio ?? false,
       outputExtensions: options.outputExtensions(parsed),
       defaultExtension: options.defaultExtension(parsed),
