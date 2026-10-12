@@ -11,6 +11,7 @@ export async function runJobFromConfig(
   config: JobConfigValidated,
   opts: RunOptions = {}
 ): Promise<void> {
+  opts.signal?.throwIfAborted();
   let job: PreparedJob;
   try {
     job = validatePlan(await planJob(config));
@@ -21,5 +22,6 @@ export async function runJobFromConfig(
   for (const task of job.tasks) {
     await runTask(task, opts);
   }
+  opts.signal?.throwIfAborted();
   opts.onLog?.('Job complete');
 }

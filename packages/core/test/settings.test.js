@@ -40,7 +40,7 @@ job:
 
     const original = await loadJobConfig(configPath);
     const context = {
-      inputFiles: ['in.mp4'],
+      inputs: { primary: 'in.mp4' },
       outputFile: 'out.mp4',
       probe: { width: 1000, height: 500, duration: 5, hasAudio: true },
       settings: original.job.settings
@@ -173,7 +173,7 @@ job:
     );
     const config = await loadJobConfig(configPath);
     const context = {
-      inputFiles: ['in.mp4'],
+      inputs: { primary: 'in.mp4' },
       outputFile: 'out.mp4',
       probe: { width: 320, height: 240, duration: 1, hasAudio: true },
       settings: config.job.settings

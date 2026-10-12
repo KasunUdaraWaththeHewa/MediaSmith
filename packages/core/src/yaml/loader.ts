@@ -25,6 +25,7 @@ export async function loadJobConfig(
 
   let parsed: unknown;
   try {
+    // Apply CLI overrides before schema validation so both YAML and overrides follow the same rules.
     parsed = applyOverrides(YAML.parse(raw), overrides);
   } catch (error) {
     throw new MediaSmithError(

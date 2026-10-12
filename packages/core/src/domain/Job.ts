@@ -1,10 +1,11 @@
 import { BaseStep } from './Step';
 import type { JobSettings } from '../yaml/settings';
 import type { PreparedActionStep } from '../ffmpeg/actions/action';
+import type { TaskInputs } from './Inputs';
 
 export interface Task {
   id: string;
-  inputFiles: string[]; // [video] or [video, audio]
+  inputs: TaskInputs;
   outputFile: string;
   steps: BaseStep[];
   settings?: JobSettings;

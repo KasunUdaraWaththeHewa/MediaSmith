@@ -3,6 +3,7 @@ import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 const nodeGlobals = {
+  AbortController: 'readonly',
   Buffer: 'readonly',
   __dirname: 'readonly',
   console: 'readonly',

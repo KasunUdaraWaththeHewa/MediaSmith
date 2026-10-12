@@ -69,6 +69,7 @@ export function applyOverrides(config: unknown, overrides: string[]): unknown {
     for (const part of parts.slice(0, -1)) {
       let next = getChild(current, part);
       if (next === undefined) {
+        // Settings may be introduced from the CLI; other paths must already exist in the YAML.
         if (parts[0] !== 'settings') throw new Error(`Override path does not exist: ${rawPath}`);
         next = {};
         setChild(current, part, next);

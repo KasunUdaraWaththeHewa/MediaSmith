@@ -1,5 +1,4 @@
-import type { StepSchema } from '../yaml/schema';
-import type { z } from 'zod';
+import type { RegisteredActionStep } from '../ffmpeg/actions';
 
-export type BaseStep = z.infer<typeof StepSchema>;
+export type BaseStep = RegisteredActionStep;
 export type StepAction = BaseStep['action'];

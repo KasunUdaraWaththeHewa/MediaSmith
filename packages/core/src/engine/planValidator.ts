@@ -1,9 +1,11 @@
 import path from 'path';
 import type { PlannedJob, PreparedJob, PreparedStep, PreparedTask, Task } from '../domain/Job';
+import { inputPaths } from '../domain/Inputs';
 import { prepareActionStep } from '../ffmpeg/actions';
 
 function pathKey(file: string): string {
   const absolute = path.resolve(file);
+  // Windows paths are case insensitive, so collision checks must be too.
   return process.platform === 'win32' ? absolute.toLowerCase() : absolute;
 }
 
@@ -18,7 +20,7 @@ function prepareTask(task: Task): PreparedTask {
         `${step.action} expects ${action.inputKind} input after a ${currentKind} step`
       );
     }
-    if (action.needsExternalAudio && task.inputFiles.length < 2) {
+    if (action.needsExternalAudio && !task.inputs.externalAudio) {
       throw new Error(`Task ${task.id} requires paired external audio`);
     }
     currentKind = action.outputKind;
@@ -37,7 +39,8 @@ function prepareTask(task: Task): PreparedTask {
 
 export function validatePlan(job: PlannedJob): PreparedJob {
   const outputs = new Set<string>();
-  const inputs = new Set(job.tasks.flatMap((task) => task.inputFiles.map(pathKey)));
+  // Check all inputs first: a task must not overwrite media needed by another task.
+  const inputs = new Set(job.tasks.flatMap((task) => inputPaths(task.inputs).map(pathKey)));
   const tasks: PreparedTask[] = [];
   for (const task of job.tasks) {
     const output = pathKey(task.outputFile);

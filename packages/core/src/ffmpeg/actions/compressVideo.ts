@@ -81,12 +81,12 @@ export function buildCompressVideoArgs(
 export const compressVideoAction = defineAction(
   CompressVideoSchema,
   (step, context) => {
-    if (!context.probe || !context.inputFiles[0]) {
+    if (!context.probe || !context.inputs.primary) {
       throw new Error('compress_video requires a video input and probe data');
     }
     return buildCompressVideoArgs(
       step,
-      context.inputFiles[0],
+      context.inputs.primary,
       context.outputFile,
       context.probe,
       context.settings?.compress_video

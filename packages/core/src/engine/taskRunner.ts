@@ -1,25 +1,26 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import type { PreparedTask, Task } from '../domain/Job';
-import { runFfmpeg } from '../ffmpeg/executor';
-import { ffprobeVideo } from '../ffmpeg/ffprobe';
+import { inputPaths } from '../domain/Inputs';
 import type { VideoProbeInfo } from '../ffmpeg/ffprobe';
+import { defaultMediaProcessRunner } from '../ffmpeg/processRunner';
 import { errorMessage, MediaSmithError } from '../errors';
+import type { RunOptions } from './options';
+import { runStep } from './stepRunner';
 
-export interface RunOptions {
-  dryRun?: boolean;
-  onLog?: (message: string) => void;
-}
+export type { RunOptions } from './options';
 
 function temporaryOutputFor(
   task: Pick<Task, 'id' | 'outputFile'>,
+  runToken: string,
   stepIndex: number,
   extension: string
 ): string {
   const name = path.basename(task.outputFile, path.extname(task.outputFile));
   return path.join(
     path.dirname(task.outputFile),
-    `.${name}.mediasmith-${task.id}-${stepIndex}${extension}`
+    `.${name}.mediasmith-${task.id}-${runToken}-${stepIndex}${extension}`
   );
 }
 
@@ -35,16 +36,21 @@ async function removeTemporaryFiles(files: string[], onLog?: RunOptions['onLog']
 }
 
 export async function runTask(task: PreparedTask, options: RunOptions): Promise<void> {
-  options.onLog?.(`Task ${task.id}: ${task.inputFiles.join(', ')} -> ${task.outputFile}`);
+  options.onLog?.(`Task ${task.id}: ${inputPaths(task.inputs).join(', ')} -> ${task.outputFile}`);
   const temporaryFiles: string[] = [];
-  let currentInput = task.inputFiles[0];
+  // Real runs need unique paths; previews use a fixed token for reproducible logs.
+  const runToken = options.dryRun ? 'preview' : crypto.randomBytes(6).toString('hex');
+  let currentInput = task.inputs.primary;
   let activeStep: { index: number; action: string } | undefined;
 
   try {
+    options.signal?.throwIfAborted();
+    const processes = options.processRunner ?? defaultMediaProcessRunner;
     const preparedSteps = task.steps;
     let previewProbe: VideoProbeInfo | undefined;
     if (options.dryRun && preparedSteps.some((step) => step.handler.needsProbe)) {
-      previewProbe = await ffprobeVideo(currentInput);
+      // Later preview steps use estimated metadata because intermediate files do not exist.
+      previewProbe = await processes.probeVideo(currentInput, { signal: options.signal });
     }
 
     if (!options.dryRun) {
@@ -56,45 +62,33 @@ export async function runTask(task: PreparedTask, options: RunOptions): Promise<
       activeStep = { index, action: step.action };
       const isFinalStep = index === task.steps.length - 1;
       const extension = isFinalStep ? path.extname(task.outputFile) : action.defaultExtension;
-      const outputFile = temporaryOutputFor(task, index, extension);
+      const outputFile = temporaryOutputFor(task, runToken, index, extension);
+      // Track the path before execution so failures and cancellation clean up partial output.
       temporaryFiles.push(outputFile);
-      let probe: VideoProbeInfo | undefined;
-      if (action.needsProbe) {
-        probe = options.dryRun ? previewProbe : await ffprobeVideo(currentInput);
-        if (!probe) {
-          throw new Error(
-            `Cannot estimate media metadata for dry-run step ${index + 1} (${step.action})`
-          );
-        }
-      }
-      const args = action.buildArgs({
-        inputFiles: [currentInput, ...task.inputFiles.slice(1)],
+      previewProbe = await runStep({
+        step,
+        stepIndex: index,
+        inputs: { ...task.inputs, primary: currentInput },
         outputFile,
-        probe,
-        settings: task.settings
+        settings: task.settings,
+        previewProbe,
+        options,
+        processes
       });
-
-      options.onLog?.(`Running step "${step.action}"...`);
-      await runFfmpeg(args, options);
-      if (options.dryRun && previewProbe) {
-        previewProbe = action.estimateProbe(previewProbe, task.settings);
-      }
       currentInput = outputFile;
     }
 
     if (!options.dryRun) {
-      for (const [index, step] of preparedSteps.entries()) {
-        activeStep = { index, action: task.steps[index].action };
-        await step.handler.validateOutput(currentInput);
-      }
+      options.signal?.throwIfAborted();
       activeStep = undefined;
+      // Publish only after every step and its output check have succeeded.
       await fs.promises.rename(currentInput, task.outputFile);
     }
   } catch (error) {
     const stepContext = activeStep ? `step ${activeStep.index + 1} (${activeStep.action}): ` : '';
     throw new MediaSmithError(
       'TASK',
-      `Task ${task.id} (${task.inputFiles.join(', ')}) failed: ${stepContext}${errorMessage(error)}`,
+      `Task ${task.id} (${inputPaths(task.inputs).join(', ')}) failed: ${stepContext}${errorMessage(error)}`,
       { taskId: task.id, stepIndex: activeStep?.index, action: activeStep?.action },
       error
     );

@@ -4,3 +4,5 @@
 /dist
 /packages/cli/dist
 /packages/core/dist
+/packages/core/node_modules
+/packages/cli/node_modules

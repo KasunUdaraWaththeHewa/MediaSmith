@@ -40,9 +40,19 @@ test('normalized pairing creates the expected output without dry-run writes', as
     createPair();
     const config = pairedJob();
     const plan = await planJob(config);
+    const repeatedPlan = await planJob(config);
     assert.equal(plan.tasks.length, 1);
+    assert.equal(plan.tasks[0].id, repeatedPlan.tasks[0].id);
+    assert.deepEqual(plan.tasks[0].inputs, {
+      primary: 'video/one (No Audio).mp4',
+      externalAudio: 'audio/one-audio.wav'
+    });
     assert.equal(plan.tasks[0].outputFile, path.join('output', 'one_final.mp4'));
-    await runJobFromConfig(config, { dryRun: true });
+    const firstPreview = [];
+    const secondPreview = [];
+    await runJobFromConfig(config, { dryRun: true, onLog: (line) => firstPreview.push(line) });
+    await runJobFromConfig(config, { dryRun: true, onLog: (line) => secondPreview.push(line) });
+    assert.deepEqual(firstPreview, secondPreview);
     assert.equal(fs.existsSync('output'), false);
   });
 });
@@ -116,5 +126,42 @@ test('execution uses the action options prepared during plan validation', async 
       /libmp3lame/
     );
     assert.equal(fs.existsSync('audio'), false);
+  });
+});
+
+test('cancelling a process cleans temporary output and stops later tasks', async () => {
+  await inWorkspace('mediasmith-plan-', async () => {
+    fs.mkdirSync('video');
+    fs.writeFileSync('video/one.mp4', 'placeholder');
+    fs.writeFileSync('video/two.mp4', 'placeholder');
+    const config = JobSchema.parse({
+      version: 1,
+      job: {
+        name: 'cancelled',
+        for_each: { glob: 'video/*.mp4' },
+        output: { directory: 'audio', filename: '{basename}.mp3' },
+        steps: [{ action: 'extract_audio', format: 'mp3' }]
+      }
+    });
+    const controller = new AbortController();
+    const commands = [];
+    const processRunner = {
+      probeVideo: async () => {
+        throw new Error('extract_audio does not need probing');
+      },
+      runFfmpeg: async (args, options) => {
+        commands.push(args);
+        fs.writeFileSync(args.at(-1), 'partial');
+        controller.abort();
+        options.signal.throwIfAborted();
+      }
+    };
+
+    await assert.rejects(
+      runJobFromConfig(config, { signal: controller.signal, processRunner }),
+      (error) => error instanceof MediaSmithError && error.code === 'TASK'
+    );
+    assert.equal(commands.length, 1);
+    assert.deepEqual(fs.readdirSync('audio'), []);
   });
 });

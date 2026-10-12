@@ -45,7 +45,7 @@ Read [CODE_MAP.md](CODE_MAP.md) for each source file's role, [ARCHITECTURE.md](A
 
 Keep action-specific defaults in `actions/defaults.ts`. Add a setting group to `yaml/settings.ts` when users need a job-wide value. Prefer an optional step field when a value should vary by step. Resolution should follow the documented order: step field, job setting, built-in default. CLI `--set` changes the YAML object before validation.
 
-Actions build arguments only. The planner owns file selection and pairing; the engine owns execution and temporary files. A new action should not launch ffmpeg itself.
+Actions build arguments only. The planner owns file selection and pairing; the engine owns execution and temporary files. Task and step contexts name their `primary` and optional `externalAudio` inputs. A new action should not launch ffmpeg itself. The process adapter in `ffmpeg/processRunner.ts` can be replaced in focused engine tests.
 
 ## Preserve existing jobs
 

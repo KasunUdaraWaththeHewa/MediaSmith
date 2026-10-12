@@ -1,7 +1,9 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const fs = require('node:fs');
+const { setTimeout, clearTimeout } = require('node:timers');
 const { JobSchema, MediaSmithError, runJobFromConfig } = require('../dist');
+const { runFfmpeg } = require('../dist/ffmpeg/executor');
 const {
   hasTool,
   inWorkspace,
@@ -16,6 +18,37 @@ const pairedFiles = {
   audio_pattern: 'audio/*.wav',
   pair_by: 'basename'
 };
+
+test(
+  'an abort signal stops the active ffmpeg process',
+  { ...needsMediaTools, timeout: 10000 },
+  async () => {
+    const controller = new AbortController();
+    const abort = setTimeout(() => controller.abort(), 150);
+    try {
+      await assert.rejects(
+        runFfmpeg(
+          [
+            '-v',
+            'error',
+            '-re',
+            '-f',
+            'lavfi',
+            '-i',
+            'color=c=black:s=32x32:r=30:d=30',
+            '-f',
+            'null',
+            '-'
+          ],
+          { signal: controller.signal }
+        ),
+        (error) => error instanceof MediaSmithError && error.code === 'PROCESS'
+      );
+    } finally {
+      clearTimeout(abort);
+    }
+  }
+);
 
 function job(name, selection, directory, filename, steps) {
   return JobSchema.parse({
@@ -139,6 +172,32 @@ test(
       await runJobFromConfig(config);
       assert.deepEqual(fs.readdirSync('podcast'), ['one.mp3']);
       assert.equal(probeStreams('podcast/one.mp3')[0].codec_name, 'mp3');
+    });
+  }
+);
+
+test(
+  'a step checks its own output before the next action changes the media',
+  needsMediaTools,
+  async () => {
+    await inWorkspace('mediasmith-media-', async () => {
+      createMediaFiles();
+      const sizeLimitMb = 0.04;
+      const config = job(
+        'compress_then_wav',
+        { for_each: { glob: 'video/*.mp4' } },
+        'audio_output',
+        '{basename}.wav',
+        [
+          { action: 'compress_video', max_size_mb: sizeLimitMb },
+          { action: 'extract_audio', format: 'wav' }
+        ]
+      );
+
+      await runJobFromConfig(config);
+      const output = 'audio_output/one.wav';
+      assert.ok(fs.statSync(output).size > sizeLimitMb * 1024 * 1024);
+      assert.equal(probeStreams(output)[0].codec_name, 'pcm_s16le');
     });
   }
 );

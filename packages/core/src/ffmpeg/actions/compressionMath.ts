@@ -8,6 +8,7 @@ export interface OutputDimensions {
 }
 
 export function outputDimensions(probe: VideoProbeInfo, maxWidth?: number): OutputDimensions {
+  // Keep encoder dimensions even; the width cap must never enlarge a smaller input.
   const requestedWidth = maxWidth ? Math.min(probe.width, maxWidth) : probe.width;
   const width = Math.max(2, Math.floor(requestedWidth / 2) * 2);
   if (width === probe.width && probe.height % 2 === 0) {
@@ -25,6 +26,7 @@ export function targetVideoBitrateKbps(
 ): number {
   const totalKbps = Math.floor((maxSizeMb * 1024 * 1024 * 8) / probe.duration / 1000);
   const audioKbps = probe.hasAudio === false ? 0 : settings.audioBitrateKbps;
+  // Reserve space for the container and audio before assigning the remaining budget to video.
   const availableVideoKbps =
     Math.floor(totalKbps * (1 - settings.overheadPercent / 100)) - audioKbps;
   if (availableVideoKbps < settings.minimumVideoKbps) {

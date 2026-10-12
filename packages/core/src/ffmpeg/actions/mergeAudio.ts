@@ -4,14 +4,6 @@ import { VIDEO_EXTENSIONS } from './formats';
 import { DEFAULT_SETTINGS } from './defaults';
 import { JobSettings, PositiveInteger } from '../../yaml/settings';
 
-export interface MergeAudioStep {
-  action: 'merge_audio';
-  audio_source: 'external_only' | 'mix';
-  original_volume?: number;
-  external_volume?: number;
-  audio_bitrate_kbps?: number;
-}
-
 export const MergeAudioSchema = z
   .object({
     action: z.literal('merge_audio'),
@@ -32,6 +24,8 @@ export const MergeAudioSchema = z
       });
     }
   });
+
+export type MergeAudioStep = z.infer<typeof MergeAudioSchema>;
 
 export function buildMergeAudioArgs(
   step: MergeAudioStep,
@@ -94,13 +88,13 @@ export function buildMergeAudioArgs(
 export const mergeAudioAction = defineAction(
   MergeAudioSchema,
   (step, context) => {
-    if (!context.inputFiles[0] || !context.inputFiles[1]) {
+    if (!context.inputs.primary || !context.inputs.externalAudio) {
       throw new Error('merge_audio requires a video and external audio input');
     }
     return buildMergeAudioArgs(
       step,
-      context.inputFiles[0],
-      context.inputFiles[1],
+      context.inputs.primary,
+      context.inputs.externalAudio,
       context.outputFile,
       context.settings?.merge_audio
     );

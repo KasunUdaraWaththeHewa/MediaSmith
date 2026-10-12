@@ -23,7 +23,7 @@ The README and existing roadmap describe additional actions. Validation now reje
 | `trim`                    | Supports a start/end range or removing time from the start/end; rejects negative or empty ranges.                                                                                       |
 | `normalize_audio`         | Adds one-pass loudness presets and documents their accuracy limits. Can run after extraction in a pipeline.                                                                             |
 | Job report                | Optional versioned JSON report lists each task's inputs, outputs, actions, duration, status, and error.                                                                                 |
-| Progress and cancellation | Parses machine-readable ffmpeg progress. Ctrl+C stops child processes and cleans temporary files.                                                                                       |
+| Progress and cancellation | Cancellation is implemented through `AbortSignal`; Ctrl+C stops active child processes and cleans temporary files. Machine-readable progress remains planned.                           |
 
 **Release gate:** Each new action works alone and in supported pipelines; users can identify failed items without reading raw ffmpeg logs.
 

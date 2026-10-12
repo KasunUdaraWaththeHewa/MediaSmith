@@ -51,6 +51,7 @@ export function resolveCompressionSettings(
   const qualitySettings = settings.quality?.[quality];
   const builtinQuality = DEFAULT_SETTINGS.compress_video.quality[quality];
 
+  // Step values take priority over named profiles, job defaults, and built-in defaults.
   return {
     maxWidth: step.max_width ?? configuredProfile?.max_width ?? builtinProfile?.max_width,
     videoBitrateKbps:

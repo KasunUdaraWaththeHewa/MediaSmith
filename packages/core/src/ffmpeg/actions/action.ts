@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import type { VideoProbeInfo } from '../ffprobe';
 import type { JobSettings } from '../../yaml/settings';
+import type { TaskInputs } from '../../domain/Inputs';
 
 export interface StepContext {
-  inputFiles: string[];
+  inputs: TaskInputs;
   outputFile: string;
   probe?: VideoProbeInfo;
   settings?: JobSettings;
@@ -27,16 +28,18 @@ export interface PreparedActionStep {
   estimateProbe(probe: VideoProbeInfo, settings?: JobSettings): VideoProbeInfo | undefined;
 }
 
-export type PreparedActionResult =
-  { success: true; data: PreparedActionStep } | { success: false; issues: z.ZodIssue[] };
+export type PreparedActionResult<S> =
+  | { success: true; data: PreparedActionStep; parsedStep: S }
+  | { success: false; issues: z.ZodIssue[] };
 
-export interface ActionDefinition {
+export interface ActionDefinition<S extends z.ZodTypeAny = z.ZodTypeAny> {
+  schema: S;
   inputKind: 'video' | 'audio';
   outputKind: 'video' | 'audio';
   needsProbe: boolean;
   needsExternalAudio: boolean;
   prepare(step: unknown): PreparedActionStep;
-  tryPrepare(step: unknown): PreparedActionResult;
+  tryPrepare(step: unknown): PreparedActionResult<z.infer<S>>;
 }
 
 interface ActionOptions<S extends z.ZodTypeAny> {
@@ -59,10 +62,11 @@ export function defineAction<S extends z.ZodTypeAny>(
   schema: S,
   buildArgs: (step: z.infer<S>, context: StepContext) => string[],
   options: ActionOptions<S>
-): ActionDefinition {
+): ActionDefinition<S> {
   const validateJobStep = options.validateJobStep;
   const validateOutput = options.validateOutput;
   function prepared(parsed: z.infer<S>): PreparedActionStep {
+    // Bind the validated step to its hooks so runners need no action-specific branches.
     return {
       inputKind: options.inputKind,
       outputKind: options.outputKind,
@@ -78,15 +82,16 @@ export function defineAction<S extends z.ZodTypeAny>(
   }
 
   return {
+    schema,
     inputKind: options.inputKind,
     outputKind: options.outputKind,
     needsProbe: options.needsProbe ?? false,
     needsExternalAudio: options.needsExternalAudio ?? false,
     prepare: (step) => prepared(schema.parse(step)),
-    tryPrepare(step): PreparedActionResult {
+    tryPrepare(step): PreparedActionResult<z.infer<S>> {
       const result = schema.safeParse(step);
       return result.success
-        ? { success: true, data: prepared(result.data) }
+        ? { success: true, data: prepared(result.data), parsedStep: result.data }
         : { success: false, issues: result.error.issues };
     }
   };

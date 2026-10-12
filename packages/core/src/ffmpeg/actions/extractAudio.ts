@@ -56,10 +56,10 @@ export function buildExtractAudioArgs(
 export const extractAudioAction = defineAction(
   ExtractAudioSchema,
   (step, context) => {
-    if (!context.inputFiles[0]) throw new Error('extract_audio requires a media input');
+    if (!context.inputs.primary) throw new Error('extract_audio requires a media input');
     return buildExtractAudioArgs(
       step,
-      context.inputFiles[0],
+      context.inputs.primary,
       context.outputFile,
       context.settings?.extract_audio
     );
