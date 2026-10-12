@@ -1,5 +1,7 @@
 # MediaSmith architecture
 
+For the supported feature snapshot and current limits, see [Implementation.md](Implementation.md). This page describes how those features are implemented.
+
 ## Current flow
 
 1. `yaml/loader.ts` reads YAML and validates it with `yaml/schema.ts`.

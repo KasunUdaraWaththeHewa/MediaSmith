@@ -2,6 +2,8 @@
 
 MediaSmith is a TypeScript CLI that turns YAML jobs into ffmpeg commands. Keep changes small, readable, and compatible with existing version 1 jobs.
 
+Automated agents should follow [AGENTS.md](AGENTS.md). All contributors should use [Implementation.md](Implementation.md) as the current behavior snapshot and update it in the same change when supported behavior or limits change.
+
 Use Node.js 20.19+, 22.13+, or 24+ for the repository tooling.
 
 ## Set up
@@ -34,7 +36,7 @@ The template's input glob must match files for `dry-run` to plan a job. Put a sa
 | `packages/core/src/ffmpeg`                | ffmpeg execution and ffprobe parsing                     |
 | `packages/core/test`, `packages/cli/test` | Behavior and media integration tests                     |
 
-Read [CODE_MAP.md](CODE_MAP.md) for each source file's role, [ARCHITECTURE.md](ARCHITECTURE.md) for the execution flow, [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) for extension contracts, and [CONFIGURATION.md](CONFIGURATION.md) for YAML settings and override precedence.
+Read [CODE_MAP.md](CODE_MAP.md) for each source file's role, [ARCHITECTURE.md](ARCHITECTURE.md) for the execution flow, [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) for extension contracts, and [CONFIGURATION.md](CONFIGURATION.md) for YAML settings and override precedence. Update the affected guides and executable template when adding a feature; keep proposals in [feature-plan.md](feature-plan.md) and [roadmap.md](roadmap.md) marked as planned.
 
 ## Add an action
 

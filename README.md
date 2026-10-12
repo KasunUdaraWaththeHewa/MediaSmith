@@ -12,7 +12,7 @@ MediaSmith is a YAML-driven CLI for batch media work with ffmpeg. A job selects 
 
 The commands are `validate`, `dry-run`, and `run`. Jobs support file globs, video/audio pairing by basename or normalized basename, multi-step pipelines, grouped settings, and repeatable `--set` overrides. Unsupported action names and fields fail validation.
 
-Features such as trimming, normalization, thumbnails, and multiple output files are proposals. See [feature-plan.md](feature-plan.md) for current status and [roadmap.md](roadmap.md) for ideas.
+Features such as trimming, normalization, thumbnails, and multiple output files are proposals. See [Implementation.md](Implementation.md) for the current behavior, [feature-plan.md](feature-plan.md) for priorities, and [roadmap.md](roadmap.md) for ideas.
 
 ## Requirements and setup
 
@@ -72,6 +72,6 @@ See [CONFIGURATION.md](CONFIGURATION.md) for fields, defaults, and precedence. A
 
 ## Contributing and project layout
 
-Run `npm test` before opening a pull request. It checks formatting, lint, build, and behavior tests. Media integration tests require ffmpeg and ffprobe; CI installs both and runs them. Start with [CONTRIBUTING.md](CONTRIBUTING.md), then use [CODE_MAP.md](CODE_MAP.md) to find a file and [ARCHITECTURE.md](ARCHITECTURE.md) to follow the execution flow. [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) explains the action contract and its current limits.
+Run `npm test` before opening a pull request. It checks formatting, lint, build, and behavior tests. Media integration tests require ffmpeg and ffprobe; CI installs both and runs them. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) for change rules, [Implementation.md](Implementation.md) for supported behavior, then use [CODE_MAP.md](CODE_MAP.md) and [ARCHITECTURE.md](ARCHITECTURE.md) to find and understand the code. [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md) explains the action contract and its current limits.
 
 MediaSmith is licensed under [ISC](LICENSE).

@@ -1,54 +1,72 @@
 # MediaSmith feature plan
 
-This plan reflects the source code as of October 2026. MediaSmith is a YAML-driven CLI that expands file globs or video/audio pairs into tasks and runs ffmpeg. Its current commands are `validate`, `dry-run`, and `run`. The executable actions are `compress_video`, `merge_audio`, and `extract_audio`. Normalized-basename pairing is implemented.
+MediaSmith currently supports `compress_video`, `merge_audio`, and `extract_audio` in YAML pipelines. Jobs can select files by glob or pair video and audio by basename or normalized basename. The CLI provides `validate`, `dry-run`, `run`, and `--set` overrides. The action registry, typed validation, named inputs, task planning, temporary outputs, cancellation, and integration tests provide the extension base.
 
-The README and existing roadmap describe additional actions. Validation now rejects actions without registered handlers. Jobs still run serially. The runner now passes temporary output between steps, cleans it after success or failure, and keeps dry-run read-only. The remaining work in Phase 1 is more complete preflight reporting and an explicit policy for existing outputs.
+This is the source of truth for **implementation status and priority**. [roadmap.md](roadmap.md) remains an idea bank; its YAML for unimplemented actions is illustrative, not accepted by the CLI. Priority is based on user value, dependencies, and the risk of changing existing jobs. Issue numbers refer to the original MediaSmith issues shown in the project backlog; “implemented” here describes the code, not the issue's GitHub state.
 
-## Phase 1: Reliable foundation (P0)
+## Already implemented
 
-| Feature                        | Status and remaining work                                                                                                                                                                                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Action-specific validation     | Implemented for registered actions and their known options. Unsupported actions fail validation. Add checks for incompatible option combinations as actions grow.                                                                                                        |
-| Real step pipelines            | Implemented with temporary files and cleanup. A real ffmpeg integration test verifies `merge_audio` followed by `compress_video` retains audible external audio.                                                                                                         |
-| Safe dry-run and output policy | Dry-run is read-only and now carries estimated metadata through supported pipelines; empty globs, unmatched/ambiguous pairs, duplicate output paths, and input/output overlap are rejected. Still add an explicit skip, error, or overwrite policy for existing outputs. |
-| Useful failures and tests      | Config, plan, task, and process failures have structured context. Formatting, lint, build, validation, pairing, pipeline, and failed ffmpeg cleanup tests run through `npm test`. Expand coverage as new actions are added.                                              |
+| Issue | Capability               | Current scope                                                                                                                                                                            |
+| ----- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #9    | Normalized pairing rules | `normalized_basename` removes configured prefixes and suffixes; unmatched and ambiguous audio pairs fail planning.                                                                       |
+| #4    | Extract audio from video | `extract_audio` produces MP3, WAV, or FLAC, including after a video step.                                                                                                                |
+| #3    | Scalable code structure  | Registered actions own validation and ffmpeg arguments; planning, step execution, process execution, and CLI concerns are separate. Continue reviewing boundaries as new actions arrive. |
+| #1    | Console logging, partial | Human-readable planning, step, and ffmpeg logs plus contextual errors exist. Structured progress and a per-task report remain planned.                                                   |
 
-**Release gate:** Every supplied template either runs as documented or fails validation with a clear reason. Dry-run leaves the filesystem unchanged.
+## P0 — Protect existing jobs before expanding the engine
 
-## Phase 2: Complete common media jobs (P1)
+Do these in order. They define behavior that every later action must follow.
 
-| Feature                   | Done when                                                                                                                                                                               |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `extract_audio`           | Implemented for MP3, WAV, and FLAC with matching output extensions. The lecture template validates; real MP3 extraction and a video-to-audio pipeline are covered by integration tests. |
-| `trim`                    | Supports a start/end range or removing time from the start/end; rejects negative or empty ranges.                                                                                       |
-| `normalize_audio`         | Adds one-pass loudness presets and documents their accuracy limits. Can run after extraction in a pipeline.                                                                             |
-| Job report                | Optional versioned JSON report lists each task's inputs, outputs, actions, duration, status, and error.                                                                                 |
-| Progress and cancellation | Cancellation is implemented through `AbortSignal`; Ctrl+C stops active child processes and cleans temporary files. Machine-readable progress remains planned.                           |
+| Order | Work                                              | Done when                                                                                                                                                                                                                                          |
+| ----- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | **Existing-output policy**                        | A job can choose `error`, `skip`, or `overwrite`; version 1 keeps its current overwrite default. The planner shows the decision for every output, and dry-run never writes. `skip` does not treat an incomplete output as success.                 |
+| 2     | **Media preflight and plan summary**              | Before ffmpeg starts, the plan reports matched inputs, outputs, duration and stream requirements where needed, missing tools or files, and collisions. Errors point to the task and YAML field.                                                    |
+| 3     | **Compatibility examples and extension contract** | Every shipped template validates in CI. New actions document accepted fields, input/output media kinds, dry-run estimates, output checks, and pipeline compatibility; a real media test covers each new action. Existing YAML retains its meaning. |
 
-**Release gate:** Each new action works alone and in supported pipelines; users can identify failed items without reading raw ffmpeg logs.
+**P0 gate:** A user can review what will run, and rerunning a job has an explicit, safe output policy.
 
-## Phase 3: Scale and reuse (P2)
+## P1 — Common single-output jobs and usable batch feedback
 
-| Feature                   | Done when                                                                                                                                       |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Bounded concurrency       | `job.concurrency` and `--concurrency` limit simultaneous ffmpeg processes; report order remains stable.                                         |
-| Resume and skip unchanged | A manifest records input fingerprints and config/action version; reruns skip only verified unchanged outputs and retry failures.                |
-| Variables and overrides   | Grouped `job.settings` and repeatable `--set path=value` are implemented. Declared reusable variables and `--var KEY=value` remain future work. |
-| Flexible pairing          | Regex capture groups or a mapping file support different camera/recorder names; ambiguous matches are reported.                                 |
-| Template discovery        | `list-templates` and `init <template>` expose bundled, executable examples with parameter descriptions.                                         |
+| Order | Issue / feature                           | Done when                                                                                                                                                                                                                                                                            |
+| ----- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 4     | **#5 Trim or keep a time range**          | `trim` accepts either start/end or remove-start/remove-end options, validates ranges against media duration, and works alone or before other compatible actions. Document whether cuts are frame-accurate and whether streams are re-encoded.                                        |
+| 5     | **#1 Structured progress and job report** | Human logs show task counts and failures clearly. Optional JSON Lines events and a versioned JSON report include stable task ID, input/output paths, action, status, timing, and error; ffmpeg noise is controllable. Event order is defined before concurrency is added.            |
+| 6     | **#2 Regex filename normalization**       | Pairing can derive keys from named capture groups with separate video/audio expressions. Invalid expressions, missing captures, duplicate keys, and unmatched files fail with actionable messages. Existing basename modes continue unchanged.                                       |
+| 7     | **#10 Bounded concurrency**               | `job.concurrency` and `--concurrency` set a positive task limit; default remains serial. Cancellation stops active children, no task writes another task's output, result order is stable, and tests cover mixed success/failure. Use a clear fail-fast or continue-on-error policy. |
+| 8     | **Audio normalization**                   | `normalize_audio` offers documented loudness presets, validates compatible media, and works after extraction. Report the chosen target and one-pass accuracy limits.                                                                                                                 |
 
-**Release gate:** Interrupted large batches resume without duplicating work, and plans keep the same output mapping across reruns.
+**P1 gate:** Common lecture and batch workflows run with understandable progress, controlled resource use, and a useful failure report.
 
-## Phase 4: Multiple outputs and interfaces (P3)
+## P2 — Multiple inputs and outputs
 
-First extend the task model to represent several inputs and outputs. Then implement `split_video`, `generate_thumbnails`, subtitle extraction, and video concatenation. Add watch mode using the same planner, output policy, and resume manifest. Treat deduplication as a separate report-producing library job that does not delete source media. A desktop interface can consume the same progress events and job reports once the CLI workflow is stable.
+Extend the task/output model before adding actions that need it. A task must be able to declare named inputs and one or more planned artifacts, with collision checks, temporary paths, cleanup, output policy, dry-run, and reports applied to every artifact.
 
-## Additional feature ideas
+| Order | Issue / feature                                    | Done when                                                                                                                                                                                                                                                           |
+| ----- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 9     | **Multi-input and multi-output planning contract** | Plan and action types describe all inputs and artifacts explicitly. Existing single-output YAML is still valid. The planner catches collisions across artifacts and input files before execution.                                                                   |
+| 10    | **#7 Concatenate ordered clips**                   | A job groups and orders clips explicitly (list or documented sort rule), rejects missing or duplicate clips, checks stream compatibility, and produces one video. Temporary concat lists are cleaned on failure or cancellation.                                    |
+| 11    | **#6 Split long recordings**                       | `split_video` plans all segment names and time ranges, supports chapter or fixed-duration splits, and reports every output. No partial published set remains after a failed task unless an explicit resume policy permits it.                                       |
+| 12    | **#8 Subtitle extraction and burn-in**             | Extraction selects an explicit stream/language and produces a declared text artifact; burn-in accepts a matched subtitle file and validates it before encoding. Document font and platform requirements and the difference between soft subtitles and burned video. |
+| 13    | **Thumbnails and multiple sidecar outputs**        | Thumbnail timestamps, names, and image formats are planned and validated using the same artifact model.                                                                                                                                                             |
 
-1. **Media preflight:** Probe input streams, codecs, duration, and available disk space; explain problems before execution.
-2. **Output verification:** Probe completed artifacts for expected streams and plausible duration; record verification results in the report.
-3. **External audio sync:** Support a signed offset and explicit trim or pad behavior when audio/video durations differ.
-4. **Metadata policy:** Allow copy or strip choices for metadata and chapters, with the resolved policy in the report.
-5. **Portable plan export:** Save a resolved, versioned execution plan so a team can review exact file mappings and settings before a long run.
+**P2 gate:** One task can safely consume several inputs or publish several outputs without special-case file handling in the CLI.
 
-**Recommended next milestone:** Finish Phase 1 preflight and existing-output policy before adding another action. The action registry and working pipeline now provide the extension foundation.
+## P3 — Repeatable large jobs and reusable configuration
+
+| Feature                            | Done when                                                                                                                                                                                                       |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Resume unchanged work              | A versioned manifest records input fingerprints, resolved settings, outputs, and verification results. Reruns skip only verified unchanged results and retry failures.                                          |
+| Portable plan export               | Users can save a versioned resolved plan with exact input/output mappings and settings for review before a long run. Paths and tool versions are recorded clearly.                                              |
+| Reusable variables and templates   | Declared variables and `--var` resolve predictably, with errors for missing values; template discovery exposes runnable examples. Includes or inheritance require a documented merge order and cycle detection. |
+| External-audio synchronization     | A signed offset and explicit trim/pad policy handle mismatched recording starts and durations.                                                                                                                  |
+| Watch mode and desktop integration | Build on stable planning, output policy, progress events, and resume behavior; keep the core usable without a UI.                                                                                               |
+
+## Rules for every new feature
+
+1. Preserve existing action names, fields, defaults, and YAML behavior. Introduce a new YAML version for a breaking change.
+2. Keep one responsibility per layer: YAML parses and validates; the planner resolves files and artifacts; actions define media behavior; the runner executes and cleans up; the CLI presents results.
+3. Make dry-run truthful and read-only. If a step needs media metadata, probe the source and carry an explicit estimate through later steps.
+4. Validate all planned output paths before execution. Never overwrite an input or another task's artifact; show the version 1 overwrite default clearly until a future YAML version can change it.
+5. Add focused schema and planner tests plus a real ffmpeg integration test for each action. Check cancellation and cleanup when an action creates temporary or multiple files.
+
+**Next milestone:** Implement the P0 output policy and preflight summary, then add `trim` using the existing action contract.
